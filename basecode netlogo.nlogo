@@ -26,7 +26,7 @@ producers-own [
   consumer-count      ; The number of consumers
   ]
 consumers-own [
-  preferences       ; Randomly generated, based on normal distributions; used in utility function
+    s       ; Randomly generated, based on normal distributions; used in utility function
   best-producer     ; The producer that this consumer last purchased a product from
   product-lifespan  ; The current lifespan of the product
   profit            ; Total profit accumulated

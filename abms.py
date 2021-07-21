@@ -1,3 +1,4 @@
+from types import new_class
 import pandas as pd
 import math
 import numpy as np
@@ -13,13 +14,6 @@ import dash_table
 start_time = time.time() # tracks execution time
 
 app = dash.Dash(external_stylesheets=[dbc.themes.SOLAR]) # bootstrap style sheet
-
-## -----------------
-
-# table with dynamic columns and rows
-# prompt user to enter how many columns and rows
-
-## -----------------
 
 class Consumer:
     def __init__(self, attributes):
@@ -54,11 +48,6 @@ class Producer:
             self.spread = range(0,1)
             self.weight = [1,2,3,4,5,6,7,8,9,10]
             self.kanotype
-            # productAttributes = {
-            #     'spread': range(0,1), 
-            #     'weight': [1,2,3,4,5,6,7,8,9,10],
-            #     'kanotypes':['basic','satisfier','delighter']
-            #     }
 
         def setkanotype(self,type):
             self.kanotype = type
@@ -129,113 +118,11 @@ class Simulation:
         df = pd.DataFrame(created_dict)
         return df
 
-    # make a function, using loop, that calculates all data i need to graph based on inputs
-    # generate dataframe to be used in graphing/figures
-
 
 ##
 
 # defining functions for layout
 
-
-# text field and titles
-def titletext():
-    return html.Div([ 
-        dbc.Card(
-            dbc.CardBody([
-                html.Div([
-                    html.H2("Market Simulator"),
-                    html.P("Interactively simulate market conditions")
-                ], style={'textAlign': 'center'})
-            ])
-        ),
-    ])
-
-def productstext():
-    return html.Div([ 
-        dbc.Card(
-            dbc.CardBody([
-                html.Div([
-                    html.P("New Product and Competitors")
-                ], style={'textAlign': 'center'})
-            ])
-        ),
-    ])
-
-# slider function for weight and standard dev
-def sliderS(name, id, min, max, step):
-    return html.Div(
-            [
-                dbc.Label(name, className = 'mx-3'),
-                html.Br(),
-                html.Div(
-                    [dcc.Slider(
-                    id=id, min=min, max=max, step=step, value=0.5,marks={0:'0', 1:'1'},
-                    className = 'mx-3',
-                    tooltip={'always_visible': True, 'placement': 'bottom'}),
-                    ],)
-                
-        ]
-    )
-
-def sliderW(name, id, min, max, step):
-    return html.Div(
-        [
-            dbc.Label(name, className = 'mx-3'),
-            html.Br(),
-            html.Div(
-                [dcc.Slider(
-                id=id, min=min, max=max, step=step, value=5,marks={1:'1', 10:'10'},
-                tooltip={'always_visible': True, 'placement': 'bottom'})
-                ],)
-            
-    ]
-)
-# kanotype input
-def kanotypeInput(name):
-    return html.Div(
-        [ 
-            dcc.Dropdown(
-                id=id, 
-                options=[
-                {'label': 'basic', 'value': 'basic'},
-                {'label': 'satisfier', 'value': 'satisfier'},
-                {'label': 'delighter', 'value': 'delighter'}],
-                value='basic'),
-    ]
-)
-
-# attribute card function that takes in the attribute name and number
-# returns attribute info, weight, standard dev slider into one card
-def attributeCard(name, attrNum):
-    return dbc.Card(
-        [
-            dbc.Row([dbc.Col(html.Div(name)), dbc.Col(dcc.Input(id=f"input{attrNum}", type="text", placeholder=f"Attribute {attrNum}", size='12',className='mx-3'))]),
-            # dbc.Row(
-                # [
-                    # html.Br(),
-                    html.Div(
-                        sliderW("Weight", f"Weight {attrNum}", 1, 10, 1),
-                        ), 
-                        sliderS("Standard Deviation", f"Standard Deviation {attrNum}", 0, 1, .05),
-                        # kanotypeInput('name')
-
-                
-        ])
-
-def productNameCard(name,prodName):
-    return dbc.Card(
-        [
-            dbc.Row([dbc.Col(html.Div(name)), dbc.Col(dcc.Input(id=f'input{prodName}', type='text', placeholder=f'Product Name', className='mr-4'))])
-        ]
-    )
-
-def productValueCard(value):
-    return dbc.Card(
-        [
-            dbc.Row([dbc.Col(html.Div(value)),dbc.Col(dcc.Input(id='',type='number',placeholder='',className='mr-4'))])
-        ]
-    )
 
 # -------------------------------------------------------
 
@@ -267,13 +154,6 @@ controls = dbc.Card( # defines controls, does not put them on screen
 
 # ])
 
-# app.layout = html.Div(children=[
-#     html.Div(className='row',  # Define the row element
-#             children=[
-#                 html.Div(className='four columns div-user-controls',),  # Define the left element
-#                 html.Div(className='eight columns div-for-charts bg-grey')  # Define the right element
-#                 ])
-#             ])
 
 app.layout = html.Div([ 
     dbc.Row(dbc.Col(html.H1("ABM Market Simulator"), style={"textAlign": "center"})),
@@ -330,6 +210,11 @@ app.layout = html.Div([
 
 html.Button('Add Attribute', id='add-row-button', n_clicks=0),
 
+ dbc.Button(
+            "Click me", id="example-button", className="mr-2", n_clicks=0
+        ),
+        html.Span(id="example-output", style={"verticalAlign": "middle"}),
+
    
 ]), width=7,style={'background-color': 'rgb(45, 101, 115)'}),
 
@@ -379,6 +264,17 @@ def display_output(rows, columns):
             'x': [c['name'] for c in columns] # change to profit calc
         }]
     }
+
+@app.callback(
+    Output("example-output", "children"), [Input("example-button", "n_clicks")]
+)
+def on_button_click(n):
+    if n is None:
+        return "Not clicked."
+    else:
+        return f"Clicked {n} times."
+
+
 
     # new callback for adding new graph of market share - pie chart
 

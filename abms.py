@@ -20,13 +20,13 @@ app = dash.Dash(external_stylesheets=[dbc.themes.SOLAR]) # bootstrap style sheet
 
 # ---------------
 
-class Consumer:
-    def __init__(self, attributes):
-        self.preferences = attributes # TODO: randomly generate preferences, if still needed 
-        # self.bestProducer = 0 # Initially, all consumers are considered to be consumers of product 0 #TODO: determine if bestProducer needed
+class Consumer: # TODO: loop to create an object for every buyer (user input), as many producers = products, list of preferences for each attribute
+    def __init__(self):
+        self.preferences # TODO: randomly generate preferences, if still needed 
+        self.bestProducer = 0 # Initially, all consumers are considered to be consumers of product 0 #TODO: determine if bestProducer needed
         
     def setpreferences(self, weight): #TODO: is this how we correctly set preferences for kano formula later
-        self.preferences = np.random.normal(scale=1) * weight # creates preferences for consumer, based on stddev of 0-1, multipled by weight
+        self.preferences = np.random.normal(scale=1) * weight # creates preferences for consumer, based on stddev of 0-1, multiplied by weight
 
 
 class Producer:
@@ -94,19 +94,6 @@ class Simulation:
     
     # def generate_df(self): # generates dataframe
     #  TODO: do appropriate calculations and return market share and profit dataframes, or one that is later sliced
-    #     created_dict = {'col': user_input, 'value': user_input * 3}
-    #     df = pd.DataFrame(created_dict)
-    #     return df
-
-    #     ;; Reports the yearly profit of a producer
-    # to-report daily-profit-of-producer [ producer-number ]
-    #   report (([sales] of producer producer-number) * ([price] of producer producer-number) * consumer-scale / days)
-    # end
-
-    # ;; Reports the yearly profit of a producer
-    # to-report monthly-profit-of-new-product
-    #   report ([sales] of producer 0 * (p1-att-1 - p1-cost) * consumer-scale) / (current-month)
-    # end
 
 # -------------------------------------------------------
 
@@ -136,7 +123,7 @@ app.layout = html.Div([
     ], style={'height': 50}),
 
     dash_table.DataTable(
-        id='adding-rows-table',
+        id='adding-rows-table', # TODO: make price attribute fixed, with satisfier (reversed)
         columns=[
             {'name': 'Attribute',
              'id': 'Attribute',
@@ -177,12 +164,6 @@ app.layout = html.Div([
                     for i in KANOTYPES
                 ]
             }},
-        # columns=[{
-        #     'name': 'Column {}'.format(i),
-        #     'id': 'column-{}'.format(i),
-        #     'deletable': True,
-        #     'renamable': True
-        # } for i in range(1, 5)],
 
 
         data=[
@@ -261,7 +242,7 @@ def update_columns(n_clicks, value, existing_columns):
             'id': value, 'name': value, 'editable': True,
             'renamable': True, 'deletable': True
         })
-    return existing_columns # need to find a way to add multiple column names; overrides name
+    return existing_columns
 
 
 @app.callback( # line graph: monthly profits

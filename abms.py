@@ -331,36 +331,6 @@ def generate_chart(n_clicks, table, buyers, cost, days):
 
 
 # -------------------------------------------------------
-# @app.callback(
-#     [Output('square', 'children'),
-#      Output('cube', 'children'),
-#      Output('twos', 'children'),
-#      Output('threes', 'children'),
-#      Output('x^x', 'children')],
-#     [Input('x1', 'value'),
-#      Input('y1', 'value'),
-#      Input('x2', 'value'),
-#      Input('y2', 'value'),
-#      Input('y3', 'value')])
-# def update_graph(x1, y1, x2, y2, y3):
-#     return x1**2, y1**3, x2**x2, y2**y2, y3**y3
-
-    # Output("pie-chart", "figure"),  # pie chart
-    # (Output('memory', 'data'), # updates dcc.store to have generated data
-    # (Output('queryTable', 'data') # fetches data from storage to show plots
-
-    # [Input("names", "value"), # pie chart
-    # Input("values", "value")]) # pie chart
-    # [Input('button', 'n_clicks')]) # dcc.store
-    # [Input('memory', 'data')]) # storage data from dcc.store
-
-
-# def generate_chart(names, values):
-#     fig = px.pie(df, values=values, names=names)
-#     return fig
-
-
-# run
 
 if __name__ == '__main__':
     app.run_server(debug=True)

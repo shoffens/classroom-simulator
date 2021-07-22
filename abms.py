@@ -11,37 +11,32 @@ import plotly.express as px
 from statistics import mean
 import time
 import dash_table
+from dash.exceptions import PreventUpdate
 start_time = time.time() # tracks execution time
 
+KANOTYPES = ['basic', 'satisfier', 'delighter']
+
 app = dash.Dash(external_stylesheets=[dbc.themes.SOLAR]) # bootstrap style sheet
+
+# ---------------
 
 class Consumer:
     def __init__(self, attributes):
         self.preferences = attributes # Randomly generated, based on normal distributions; used in utility function
         self.bestProducer = 0 # Initially, all consumers are considered to be consumers of product 0
-        self.productLifespan = -1 # A lifespan of less than 0 means the consumer no longer owns a product, initializes
         
     def setpreferences(self, weight): 
         self.preferences = np.random.normal(scale=1) * weight # creates preferences for consumer, based on stddev of 0-1, multipled by weight
 
-    def setProductLifespan(self, productLifespans):
-        self.productLifespan = max(self.productLifespans) * 2.5 * 12 # 2.5 sets it to be a 10x multiplier for the inputted product lifespan
-
 
 class Producer:
-    def __init__(self, productLifespans):
-        self.avgProductLifespan = -1 # product-lifespan; The average amount of time (in years) before the product breaks
-        self.productLifespans = productLifespans # list of all lifespans for products (user input)
+    def __init__(self):
         self.profit = 0 # total profit accumulated for new product (starting with no profit)
         self.sales = 0 # The total amount of products that have been sold
         self.price = 0 # The price of the product
         self.productvalues = 0
         self.productlife = 0
         self.productioncost = 0
-        #self.productAttributes = productAttributes # A list of attribute values for this producer's product (user input)
-
-    def setavgProductLifespan(self, average):
-        self.avgProductLifespan = average(self.avgProductLifespan) * 365 # separate
 
     class ProductAttributes:
         def __init__ (self):
@@ -104,29 +99,48 @@ class Simulation:
 
     def setconsumerScale(self,buyers,consumerCount): # Defines number of real world consumers represented
         self.consumerScale = (buyers / consumerCount)
-
-    def setproductLifespan(self,productLifespan,days): # Decrement the lifespan of the product accordingly
-        self.productLifespan = (productLifespan - days) 
        
-    
     def setdays(self,ticks,daysPerTick): # Update the amount of days that have elapsed
         self.days = ticks * (daysPerTick + 1)
         return ticks # update the simulation graphs to current day  ----------------------- UPDATE once plots are made
 
-    def generate_df(user_input): # generates dataframe CHANGE ! ---------------------------------------------------------------------
-        created_dict = {'col': user_input, 'value': user_input * 3}
-        df = pd.DataFrame(created_dict)
-        return df
+    
+    
+    # def setconsumerScale(self,buyers,consumerCount): # Defines number of real world consumers represented
+    #     self.consumerScale = (buyers / consumerCount)
+       
+    # def setdays(self,ticks,daysPerTick): # Update the amount of days that have elapsed
+    #     self.days = ticks * (daysPerTick + 1)
+    #     return ticks # update the simulation graphs to current day  ----------------------- UPDATE once plots are made
 
+    
+    
+    # def generate_df(self): # generates dataframe
+    #  TODO: do appropriate calculations and return market share and profit dataframes, or one that is later sliced
+    #     created_dict = {'col': user_input, 'value': user_input * 3}
+    #     df = pd.DataFrame(created_dict)
+    #     return df
 
-##
+    #     ;; Reports the yearly profit of a producer
+    # to-report daily-profit-of-producer [ producer-number ]
+    #   report (([sales] of producer producer-number) * ([price] of producer producer-number) * consumer-scale / days)
+    # end
 
-# defining functions for layout
+    # ;; Reports the yearly profit of a producer
+    # to-report monthly-profit-of-new-product
+    #   report ([sales] of producer 0 * (p1-att-1 - p1-cost) * consumer-scale) / (current-month)
+    # end
 
+    # ;; Reports the current year of the simulation
+    # to-report current-year
+    #   report (days / 365)
+    # end
 
-# -------------------------------------------------------
+    # ;; Reports the current month of the simulation
+    # to-report current-month
+    #   report (days * 12 / 365)
+    # end
 
-# dcc.Store(id='memory')
 
 # -------------------------------------------------------
 
@@ -137,22 +151,7 @@ controls = dbc.Card( # defines controls, does not put them on screen
     body=True,
 )
 
-
-
 # -----------    page layout   ------------------------
-
-# app.layout  = html.Div ([
-
-#     html.Div([
-#         html.H1(children='Market Simulator',
-#         style = {'textAlign': 'center'}
-#         )],
-#     ),
-    
-
-
-
-# ])
 
 
 app.layout = html.Div([ 
@@ -180,6 +179,7 @@ app.layout = html.Div([
 
             {'name': 'Kanotype',
              'id': 'Kanotype',
+             'presentation': 'dropdown',
              'deletable': False,
              'renamable': False},
 
@@ -191,35 +191,81 @@ app.layout = html.Div([
             {'name': 'Weight',
              'id': 'Weight',
              'deletable': False,
-             'renamable': True},
+             'renamable': False},
+
+            {'name': 'New Product',
+             'id': 'NewProduct',
+             'deletable': False,
+             'renamable': False},
+
+            {'name': 'Competitor 1',
+             'id': 'Competitor-1',
+             'deletable': False,
+             'renamable': True},             
         ],
+
+        dropdown={
+            'Kanotype': {
+                'options': [
+                    {'label': i, 'value': i}
+                    for i in KANOTYPES
+                ]
+            }},
         # columns=[{
         #     'name': 'Column {}'.format(i),
         #     'id': 'column-{}'.format(i),
         #     'deletable': True,
         #     'renamable': True
         # } for i in range(1, 5)],
+
+
         data=[
-            {'column-{}'.format(i): (j + (i-1)*5) for i in range(1, 5)}
-            for j in range(5)
+            {
+                'Attribute': None,
+                'Kanotype': None,
+                'Stdev': None,
+                'Weight': None,
+                'New Product': None,
+                'Competitor-1': None
+            }
+            for i in range(5)
         ],
+        css=[{"selector": ".Select-menu-outer", "rule": "display: block !important"}],
+
+
         editable=True,
-        row_deletable=True
+        row_deletable=True,
+
+        # TODO: conditionally or manually format the columns that can't be deleted
+
+        # style_data_conditional=[{
+        #     'if': {'column_deletable': False},
+        #     'backgroundColor': 'rgb(30, 30, 30)',
+        #     'color': 'white'
+        # }],
+        # style_header_conditional=[{
+        #     'if': {'column_deletable': False},
+        #     'backgroundColor': 'rgb(30, 30, 30)',
+        #     'color': 'white'
+        # }],
         
 ),
 
-html.Button('Add Attribute', id='add-row-button', n_clicks=0),
+# TODO: put elements in one horizontal row and fix their formatting
+    dbc.Row([
+        dbc.Col(dbc.Button('Add Attribute', id='add-row-button', n_clicks=0), width=2),
+        dbc.Col(dbc.Input(id='buyers-in-market', placeholder='Buyers in market', type='number'), width=2),
+        dbc.Col(dbc.Input(id='days', placeholder='Days to simulate', type='number'), width=2),
+        dbc.Col(dbc.Input(id='production-cost', placeholder='Production cost of new product', type='number'), width=3),
+        dbc.Col(dbc.Button('Run Simulation', id='run-sim'), width=2)
+        ], justify="start")
+]),
 
- dbc.Button(
-            "Click me", id="example-button", className="mr-2", n_clicks=0
-        ),
-        html.Span(id="example-output", style={"verticalAlign": "middle"}),
-
-   
-]), width=7,style={'background-color': 'rgb(45, 101, 115)'}),
+width=12,style={'background-color': 'rgb(45, 101, 115)'}),
 
 
-dbc.Col(html.Div(dcc.Graph(id='adding-rows-graph')), width=5),
+dbc.Col(html.Div(dcc.Graph(id='line-graph')), width=6),
+dbc.Col(html.Div(dcc.Graph(id='pie-chart')), width=6), #TODO: figure out why this loads like a line graph. may be related to preventUpdate
 ])
 ])
 
@@ -227,7 +273,7 @@ dbc.Col(html.Div(dcc.Graph(id='adding-rows-graph')), width=5),
 
 # ------------------ end of layout --------------------
 
-@app.callback(
+@app.callback( # adds attributes 
     Output('adding-rows-table', 'data'),
     Input('add-row-button', 'n_clicks'),
     State('adding-rows-table', 'data'),
@@ -238,7 +284,7 @@ def add_row(n_clicks, rows, columns):
     return rows
 
 
-@app.callback(
+@app.callback( # adds products
     Output('adding-rows-table', 'columns'),
     Input('add-column-button', 'n_clicks'),
     State('adding-rows-name', 'value'),
@@ -246,38 +292,42 @@ def add_row(n_clicks, rows, columns):
 def update_columns(n_clicks, value, existing_columns):
     if n_clicks > 0:
         existing_columns.append({
-            'id': value, 'name': value,
+            'id': value, 'name': value, 'editable': True,
             'renamable': True, 'deletable': True
         })
-    return existing_columns
+    return existing_columns # need to find a way to add multiple column names; overrides name
 
 
-@app.callback(
-    Output('adding-rows-graph', 'figure'),
+@app.callback( # line graph: monthly profits
+    Output('line-graph', 'figure'),
     Input('adding-rows-table', 'data'),
     Input('adding-rows-table', 'columns'))
 def display_output(rows, columns):
     return {
         'data': [{
             'type': 'line',
-            'z': [[row.get(c['id'], None) for c in columns] for row in rows], # change to profit calc
-            'x': [c['name'] for c in columns] # change to profit calc
+           # 'y': [0], # change to profit calc
+            #'x': [# representing 5 years - 0-60 (months) on x axis]
         }]
     }
 
-@app.callback(
-    Output("example-output", "children"), [Input("example-button", "n_clicks")]
-)
-def on_button_click(n):
-    if n is None:
-        return "Not clicked."
+@app.callback( # pie chart: market share
+    Output('pie-chart', 'figure'), 
+    Input('run-sim', 'n_clicks'),
+    State('adding-rows-table', 'data'),
+    State('buyers-in-market', 'value'),
+    State('production-cost', 'value'),
+    State('days', 'value'))
+def generate_chart(n_clicks, table, buyers, cost, days): 
+    if n_clicks is None:
+        raise PreventUpdate
     else:
-        return f"Clicked {n} times."
+        print(table)
+        # names = list(data[0].keys()) + ['aa']
+        sim = Simulation(table, buyers, int(days), cost)
 
-
-
-    # new callback for adding new graph of market share - pie chart
-
+        fig = px.pie(table, values='Weight', names='Attribute')
+        return fig
 
 
 # -------------------------------------------------------

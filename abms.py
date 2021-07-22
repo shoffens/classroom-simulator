@@ -14,7 +14,7 @@ import dash_table
 from dash.exceptions import PreventUpdate
 start_time = time.time() # tracks execution time
 
-KANOTYPES = ['basic', 'satisfier', 'delighter']
+KANOTYPES = ['basic', 'satisfier', 'delighter', 'basic (reversed)', 'satisfier (reversed)', 'delighter (reversed)']
 
 app = dash.Dash(external_stylesheets=[dbc.themes.SOLAR]) # bootstrap style sheet
 
@@ -22,10 +22,10 @@ app = dash.Dash(external_stylesheets=[dbc.themes.SOLAR]) # bootstrap style sheet
 
 class Consumer:
     def __init__(self, attributes):
-        self.preferences = attributes # Randomly generated, based on normal distributions; used in utility function
-        self.bestProducer = 0 # Initially, all consumers are considered to be consumers of product 0
+        self.preferences = attributes # TODO: randomly generate preferences, if still needed 
+        # self.bestProducer = 0 # Initially, all consumers are considered to be consumers of product 0 #TODO: determine if bestProducer needed
         
-    def setpreferences(self, weight): 
+    def setpreferences(self, weight): #TODO: is this how we correctly set preferences for kano formula later
         self.preferences = np.random.normal(scale=1) * weight # creates preferences for consumer, based on stddev of 0-1, multipled by weight
 
 
@@ -34,8 +34,6 @@ class Producer:
         self.profit = 0 # total profit accumulated for new product (starting with no profit)
         self.sales = 0 # The total amount of products that have been sold
         self.price = 0 # The price of the product
-        self.productvalues = 0
-        self.productlife = 0
         self.productioncost = 0
 
     class ProductAttributes:
@@ -47,7 +45,7 @@ class Producer:
         def setkanotype(self,type):
             self.kanotype = type
 
-        def calculateUtilityScore(self, preferences):
+        def calculateUtilityScore(self, preferences): #TODO: add correct kano formulas, determine if attributes/preferences var needed
             score = 0
             if self.kanotype == 'basic':
                 score = preferences * (0 - math.e ^ (2 * preferences - 1))
@@ -88,32 +86,11 @@ class Producer:
 
 class Simulation:
     def __init__ (self, days):
-        self.consumerCount = 0 # number of consumers in simulation, representing larger population
-        self.buyers = 0 # number of total population outside of simulation
-        self.consumerScale = 0 # The number of actual consumers represented by 1 consumer in the simulation
+        self.buyers = 0 # number of consumers
         self.days = 1 # number of days in simulation
-        self.currentmonth = (days * 12 / 365)
-        self.currentyear = (days / 365)
         self.ticks = 1 # set to 1 to produce count of days
         self.daysPerTick = 0 # start at 0 so ticks will count from day 1
 
-    def setconsumerScale(self,buyers,consumerCount): # Defines number of real world consumers represented
-        self.consumerScale = (buyers / consumerCount)
-       
-    def setdays(self,ticks,daysPerTick): # Update the amount of days that have elapsed
-        self.days = ticks * (daysPerTick + 1)
-        return ticks # update the simulation graphs to current day  ----------------------- UPDATE once plots are made
-
-    
-    
-    # def setconsumerScale(self,buyers,consumerCount): # Defines number of real world consumers represented
-    #     self.consumerScale = (buyers / consumerCount)
-       
-    # def setdays(self,ticks,daysPerTick): # Update the amount of days that have elapsed
-    #     self.days = ticks * (daysPerTick + 1)
-    #     return ticks # update the simulation graphs to current day  ----------------------- UPDATE once plots are made
-
-    
     
     # def generate_df(self): # generates dataframe
     #  TODO: do appropriate calculations and return market share and profit dataframes, or one that is later sliced
@@ -130,17 +107,6 @@ class Simulation:
     # to-report monthly-profit-of-new-product
     #   report ([sales] of producer 0 * (p1-att-1 - p1-cost) * consumer-scale) / (current-month)
     # end
-
-    # ;; Reports the current year of the simulation
-    # to-report current-year
-    #   report (days / 365)
-    # end
-
-    # ;; Reports the current month of the simulation
-    # to-report current-month
-    #   report (days * 12 / 365)
-    # end
-
 
 # -------------------------------------------------------
 
@@ -251,7 +217,7 @@ app.layout = html.Div([
         
 ),
 
-# TODO: put elements in one horizontal row and fix their formatting
+# TODO: put elements in one horizontal row and fix formatting
     dbc.Row([
         dbc.Col(dbc.Button('Add Attribute', id='add-row-button', n_clicks=0), width=2),
         dbc.Col(dbc.Input(id='buyers-in-market', placeholder='Buyers in market', type='number'), width=2),

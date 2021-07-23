@@ -12,6 +12,7 @@ from statistics import mean
 import time
 import dash_table
 from dash.exceptions import PreventUpdate
+import random
 start_time = time.time() # tracks execution time
 
 KANOTYPES = ['basic', 'satisfier', 'delighter', 'basic (reversed)', 'satisfier (reversed)', 'delighter (reversed)']
@@ -21,13 +22,36 @@ app = dash.Dash(external_stylesheets=[dbc.themes.SOLAR]) # bootstrap style sheet
 # ---------------
 
 class Consumer: # TODO: loop to create an object for every buyer (user input), as many producers = products, list of preferences for each attribute
-    def __init__(self):
-        self.preferences # TODO: randomly generate preferences, if still needed 
-        self.bestProducer = 0 # Initially, all consumers are considered to be consumers of product 0 #TODO: determine if bestProducer needed
-        
-    def setpreferences(self, weight): #TODO: is this how we correctly set preferences for kano formula later
-        self.preferences = np.random.normal(scale=1) * weight # creates preferences for consumer, based on stddev of 0-1, multiplied by weight
+    def __init__(self, stdevs, weights, kanotypes):
+        self.setPreferences(stdevs, weights)
+        self.bestProducer = 0 #TODO: determine if bestProducer needed
+        self.kanotypes = kanotypes
 
+    def setpreferences(self, weight, stdevs):
+        self.preferences = []
+        for stdev, weight in zip(stdevs, weights):
+            weightedPreference = np.random.normal(scale=stdev) * weight
+            self.preferences.append(weightedPreference)
+
+    def pickTopProduct(self):
+        def calculateUtilityScore(attributes, preference, kanotype):
+            score = 0
+            if kanotype == 'basic':
+                score = preference * (0 - math.e ** (-2 * attribute - 1))
+                # preference * (0 - e ^ (2 * attributes - 1))
+            elif kanotype == 'satisfier':
+                score = preference * attribute
+                # preferences * attributes
+            elif kanotype == 'delighter':
+                score = preference * math.e ** (2 * attribute - 1)
+                # preferences * e ^ 2 * attributes - 1
+            elif kanotype == 'basic (reversed)':
+                score = preference * (0 - math.e ** (2 * attribute - 1))
+            elif kanotype == 'satisfier (reversed)':
+                score = -preference * attribute
+            elif kanotype == 'delighter (reversed)':
+                score = preference * math.e ** (-2 * attribute - 1))
+            return score
 
 class Producer:
     def __init__(self):
@@ -45,20 +69,7 @@ class Producer:
         def setkanotype(self,type):
             self.kanotype = type
 
-        def calculateUtilityScore(self, preferences): #TODO: add correct kano formulas, determine if attributes/preferences var needed
-            score = 0
-            if self.kanotype == 'basic':
-                score = preferences * (0 - math.e ^ (2 * preferences - 1))
-                return score
-                # preferences * (0 - e ^ (2 * attributes - 1))
-            if self.kanotype == 'satisfier':
-                score = preferences
-                return score
-                # preferences * attributes
-            if self.kanotype == 'delighter':
-                score = preferences * math.e ^ 2 * preferences - 1
-                return score
-                # preferences * e ^ 2 * attributes - 1
+       
 
     #     ;; UTILITY FUNCTION
     # ; Find utility for each attribute, and sum them up into temp-utility
@@ -169,7 +180,7 @@ app.layout = html.Div([
         data=[
             {
                 'Attribute': None,
-                'Kanotype': None,
+                'Kanotype': None, # TODO: tooltip for hovering over kano type dropdown, shows graph/descriptors
                 'Stdev': None,
                 'Weight': None,
                 'New Product': None,

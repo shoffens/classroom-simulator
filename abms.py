@@ -29,86 +29,125 @@ class Consumer: # TODO: loop to create an object for every buyer (user input), a
 
     def setpreferences(self, weight, stdevs):
         self.preferences = []
-        for stdev, weight in zip(stdevs, weights):
+        for stdev, weight in zip(stdevs, weight):
             weightedPreference = np.random.normal(scale=stdev) * weight
             self.preferences.append(weightedPreference)
 
-    def pickTopProduct(self):
+    def pickTopProduct(self, products):
         def calculateUtilityScore(attributes, preference, kanotype):
             score = 0
             if kanotype == 'basic':
                 score = preference * (0 - math.e ** (-2 * attribute - 1))
-                # preference * (0 - e ^ (2 * attributes - 1))
             elif kanotype == 'satisfier':
                 score = preference * attribute
-                # preferences * attributes
             elif kanotype == 'delighter':
                 score = preference * math.e ** (2 * attribute - 1)
-                # preferences * e ^ 2 * attributes - 1
             elif kanotype == 'basic (reversed)':
                 score = preference * (0 - math.e ** (2 * attribute - 1))
             elif kanotype == 'satisfier (reversed)':
                 score = -preference * attribute
             elif kanotype == 'delighter (reversed)':
-                score = preference * math.e ** (-2 * attribute - 1))
+                score = preference * math.e ** (-2 * attribute - 1)
             return score
 
+        result = {}
+        for idx, product in enumerate(products):
+            sum = 0
+            for attribute, preference, kanotype in zip(product.valueList, self.preferences, self.kanotypes):
+                sum += calculateUtilityScore(attribute, preference, kanotype)
+            result[idx] = sum
+        chosenIdx = max(result, key=result.get)
+        products[chosenIdx].buy()
+        self.bestProducer = chosenIdx
+
 class Producer:
-    def __init__(self):
+    def __init__(self, name, valueList):
+        self.name = name
         self.profit = 0 # total profit accumulated for new product (starting with no profit)
-        self.sales = 0 # The total amount of products that have been sold
-        self.price = 0 # The price of the product
-        self.productioncost = 0
+        self.sales = 0 # the total amount of products that have been sold
+        self.price = 0 # the price of the product
+        self.productioncost = 0 # cost of producing item
+        self.valueList = valueList # list of attribute scores
 
-    class ProductAttributes:
-        def __init__ (self):
-            self.spread = range(0,1)
-            self.weight = [1,2,3,4,5,6,7,8,9,10]
-            self.kanotype
+    def buy(self): # determines if sale is made, product is bought
+        self.sales += 1
 
-        def setkanotype(self,type):
-            self.kanotype = type
+class Attribute:
+    def __init__ (self, name, kanotype, stdev, weight):
+        self.name = name
+        self.kanotype = kanotype
+        self.stdev = stdev
+        self.weight = weight
 
-       
-
-    #     ;; UTILITY FUNCTION
-    # ; Find utility for each attribute, and sum them up into temp-utility
-    # (foreach ([product-attributes] of ?) preferences attribute-kano-types [ ; 1? - product attribute, ?2 - preference, ?3 - kano type
-    #     if (?3 = "delighter") [
-    #       set temp-utility (temp-utility + ?2 * e ^ (2 * ?1 - 1))
-    #     ]
-    #     if (?3 = "satisfier") [
-    #       set temp-utility (temp-utility + ?2 * ?1)
-    #     ]
-    #     if (?3 = "basic") [
-    #       set temp-utility (temp-utility + ?2 * (0 - e ^ (-2 * ?1 - 1)))
-    #     ]
-    #     if (?3 = "delighter (reversed)") [
-    #       set temp-utility (temp-utility + ?2 * e ^ (-2 * ?1 - 1))
-    #     ]
-    #     if (?3 = "satisfier (reversed)") [
-    #       set temp-utility (temp-utility - ?2 * ?1)
-    #     ]
-    #     if (?3 = "basic (reversed)") [
-    #       set temp-utility (temp-utility + ?2 * (0 - e ^ (2 * ?1 - 1)))
-    #     ]
-    #   ])
+    def setkanotype(self,type):
+        self.kanotype = type
 
 
-class Simulation:
-    def __init__ (self, days):
-        self.buyers = 0 # number of consumers
-        self.days = 1 # number of days in simulation
-        self.ticks = 1 # set to 1 to produce count of days
-        self.daysPerTick = 0 # start at 0 so ticks will count from day 1
-
+class Simulation: # components of simulation, data table + buttons
+    def __init__ (self, table, consumers, days, cost, daysPerTick):
+        self.df = table
+        self.consumers = consumers # number of consumers ("buyers")
+        self.days = days # number of days in simulation
+        self.cost = cost # production cost
+        self.daysPerTick = daysPerTick # days per tick in simulation
+        self.ticks = days//daysPerTick # returns days integer values
     
+        self.profitPerSale = int(self.df.iloc[0, 4]) - self.cost
+
+        self.attributeDF = self.df.iloc[:, 0:4]
+
+        self.productDF = self.df.iloc[:, 4:]
+
+        self.setAttributes(self.attributeDF)
+        self.setProducts(self.productDF)
+
+        self.profitDF = {'time': [], 'profit': [] } 
+
+        for i in range(self.ticks):
+            self.consumers = [Consumer(self.df['Stdev'], self.df['Weight'], self.df['Kanotype']) for _ in range(consumers)]
+
+            
+            for consumer in self.consumers:
+                consumer.pickTopProduct(self.products)
+            # max_obj = max(self.products, key=lambda p: p.sales)
+            self.profitDF['time'].append(i*self.daysPerTick)
+            self.profitDF['profit'].append(self.products[0].sales * self.profitPerSale)
+        
+    def setAttributes(self, attributeDF):
+        attributes = []
+        for _, row in self.attributeDF.iterrows():
+            attribute = None
+            if not None in row.values:
+                attribute = Attribute(*row.values)
+            attributes.append(attribute)
+        self.attributes = attributes
+    
+    def setProducts(self, Product, productDF):
+        products = []
+        for col in productDF:
+            values = productDF[col]
+            products.append(Product(values.values, col))
+        self.products = products
+
+
+    def getProfitData(self):
+        return self.profitDF
+    
+    
+    def getMarketShares(self):
+        ms = {'name': [], 'sales': [] } # TODO: optimize
+        for product in self.products:
+            ms['name'].append(product.name)
+            ms['sales'].append(product.sales)
+        df = pd.DataFrame(ms)
+        return df
+
     # def generate_df(self): # generates dataframe
     #  TODO: do appropriate calculations and return market share and profit dataframes, or one that is later sliced
 
 # -------------------------------------------------------
 
-controls = dbc.Card( # defines controls, does not put them on screen
+controls = dbc.Card( # apply button
     [
     dbc.Button('Apply', id='submit-button', color='primary', block=True, className='mr-1')
     ],
@@ -155,17 +194,20 @@ app.layout = html.Div([
             {'name': 'Weight',
              'id': 'Weight',
              'deletable': False,
-             'renamable': False},
+             'renamable': False,
+             'type':'numeric'},
 
             {'name': 'New Product',
              'id': 'NewProduct',
              'deletable': False,
-             'renamable': False},
+             'renamable': False,
+             'type':'numeric'},
 
             {'name': 'Competitor 1',
              'id': 'Competitor-1',
              'deletable': False,
-             'renamable': True},             
+             'renamable': True,
+             'type':'numeric'},             
         ],
 
         dropdown={
@@ -179,20 +221,19 @@ app.layout = html.Div([
 
         data=[
             {
-                'Attribute': None,
-                'Kanotype': None, # TODO: tooltip for hovering over kano type dropdown, shows graph/descriptors
+                'Attribute': 'Price',
+                'Kanotype': 'satisfier (reversed)', 
                 'Stdev': None,
                 'Weight': None,
                 'New Product': None,
                 'Competitor-1': None
             }
-            for i in range(5)
+            for i in range(1)
         ],
-        css=[{"selector": ".Select-menu-outer", "rule": "display: block !important"}],
-
-
         editable=True,
         row_deletable=True,
+
+        css=[{"selector": ".Select-menu-outer", "rule": "display: block !important"}],
 
         # TODO: conditionally or manually format the columns that can't be deleted
 
@@ -212,8 +253,9 @@ app.layout = html.Div([
 # TODO: put elements in one horizontal row and fix formatting
     dbc.Row([
         dbc.Col(dbc.Button('Add Attribute', id='add-row-button', n_clicks=0), width=2),
-        dbc.Col(dbc.Input(id='buyers-in-market', placeholder='Buyers in market', type='number'), width=2),
+        dbc.Col(dbc.Input(id='consumers-in-market', placeholder='Consumers in market', type='number'), width=2),
         dbc.Col(dbc.Input(id='days', placeholder='Days to simulate', type='number'), width=2),
+        dbc.Col(dbc.Input(id='daysPerTick', placeholder='Days Per Tick', type='number'), width=2),
         dbc.Col(dbc.Input(id='production-cost', placeholder='Production cost of new product', type='number'), width=3),
         dbc.Col(dbc.Button('Run Simulation', id='run-sim'), width=2)
         ], justify="start")
@@ -223,7 +265,7 @@ width=12,style={'background-color': 'rgb(45, 101, 115)'}),
 
 
 dbc.Col(html.Div(dcc.Graph(id='line-graph')), width=6),
-dbc.Col(html.Div(dcc.Graph(id='pie-chart')), width=6), #TODO: figure out why this loads like a line graph. may be related to preventUpdate
+dbc.Col(html.Div(dcc.Graph(id='pie-chart')), width=6), # fix to make it pie chart
 ])
 ])
 
@@ -255,37 +297,28 @@ def update_columns(n_clicks, value, existing_columns):
         })
     return existing_columns
 
-
-@app.callback( # line graph: monthly profits
-    Output('line-graph', 'figure'),
-    Input('adding-rows-table', 'data'),
-    Input('adding-rows-table', 'columns'))
-def display_output(rows, columns):
-    return {
-        'data': [{
-            'type': 'line',
-           # 'y': [0], # change to profit calc
-            #'x': [# representing 5 years - 0-60 (months) on x axis]
-        }]
-    }
-
 @app.callback( # pie chart: market share
     Output('pie-chart', 'figure'), 
+    Output('line-graph', 'figure'),
     Input('run-sim', 'n_clicks'),
     State('adding-rows-table', 'data'),
-    State('buyers-in-market', 'value'),
+    State('consumers-in-market', 'value'),
     State('production-cost', 'value'),
-    State('days', 'value'))
-def generate_chart(n_clicks, table, buyers, cost, days): 
+    State('days', 'value'),
+    State('daysPerTick','value'))
+def generate_chart(n_clicks, table, consumers, cost, days, daysPerTick): 
     if n_clicks is None:
         raise PreventUpdate
     else:
-        print(table)
-        # names = list(data[0].keys()) + ['aa']
-        sim = Simulation(table, buyers, int(days), cost)
+        df = pd.DataFrame.from_records(table)
+        sim = Simulation(df, consumers, int(days), cost, daysPerTick)
 
-        fig = px.pie(table, values='Weight', names='Attribute')
-        return fig
+        ms = sim.getMarketShares()
+        pie = px.pie(ms, values='sales', names='names')
+
+        profit = sim.getProfitData()
+        line = px.line(profit, x='time', y='profit')
+        return pie, line
 
 
 # -------------------------------------------------------

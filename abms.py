@@ -13,28 +13,34 @@ import time
 import dash_table
 from dash.exceptions import PreventUpdate
 import random
-start_time = time.time() # tracks execution time
+start_time = time.time()  # tracks execution time
 
-KANOTYPES = ['basic', 'satisfier', 'delighter', 'basic (reversed)', 'satisfier (reversed)', 'delighter (reversed)']
+KANOTYPES = ['basic', 'satisfier', 'delighter',
+             'basic (reversed)', 'satisfier (reversed)', 'delighter (reversed)']
 
-app = dash.Dash(external_stylesheets=[dbc.themes.SOLAR]) # bootstrap style sheet
+# bootstrap style sheet
+app = dash.Dash(external_stylesheets=[dbc.themes.SOLAR])
 
 # ---------------
 
-class Consumer: # TODO: loop to create an object for every buyer (user input), as many producers = products, list of preferences for each attribute
+
+class Consumer:
     def __init__(self, stdevs, weights, kanotypes):
         self.setPreferences(stdevs, weights)
-        self.bestProducer = 0 #TODO: determine if bestProducer needed
+        self.bestProducer = 0
         self.kanotypes = kanotypes
 
-    def setpreferences(self, weight, stdevs):
+    def setPreferences(self, stdevs, weights):  # creates consumer preferences
         self.preferences = []
-        for stdev, weight in zip(stdevs, weight):
-            weightedPreference = np.random.normal(scale=stdev) * weight
+        for stdev, weight in zip(stdevs, weights):
+            weightedPreference = np.random.lognormal(
+                sigma=stdev, mean=1) * weight # weighted preference with degree of randomness
             self.preferences.append(weightedPreference)
 
     def pickTopProduct(self, products):
-        def calculateUtilityScore(attributes, preference, kanotype):
+        # TODO: add correct kano formulas, determine if attributes/preferences var needed
+        def calculateUtilityScore(attribute, preference, kanotype):
+            attribute = float(attribute)
             score = 0
             if kanotype == 'basic':
                 score = preference * (0 - math.e ** (-2 * attribute - 1))
@@ -48,72 +54,84 @@ class Consumer: # TODO: loop to create an object for every buyer (user input), a
                 score = -preference * attribute
             elif kanotype == 'delighter (reversed)':
                 score = preference * math.e ** (-2 * attribute - 1)
+            print("printing util values:")
+            print(kanotype)
+            print(preference)
+            print(attribute)
+            print(score)
+            print()
             return score
 
         result = {}
-        for idx, product in enumerate(products):
+        for idx, product in enumerate(products): # splitting the 1st value to idx, 2nd to product
             sum = 0
-            for attribute, preference, kanotype in zip(product.valueList, self.preferences, self.kanotypes):
-                sum += calculateUtilityScore(attribute, preference, kanotype)
-            result[idx] = sum
-        chosenIdx = max(result, key=result.get)
-        products[chosenIdx].buy()
+            print(f"calculating product {idx} for consumer")
+            for attribute, preference, kanotype in zip(product.valueList, self.preferences, self.kanotypes): # loop through all at same time in parallel
+                sum += calculateUtilityScore(attribute, preference, kanotype)  # figures out score based on kanotype
+            result[idx] = sum # once the score is found, consumer gets list of all products and how they are scored
+        chosenIdx = max(result, key=result.get) # consumer choice of product that has best score
+        print(result) # checking result and index
+        print(chosenIdx)
+        products[chosenIdx].buy() # consumers buy product
         self.bestProducer = chosenIdx
 
-class Producer:
-    def __init__(self, name, valueList):
+
+class Product:
+    def __init__(self, valueList, name):
         self.name = name
         self.profit = 0 # total profit accumulated for new product (starting with no profit)
-        self.sales = 0 # the total amount of products that have been sold
-        self.price = 0 # the price of the product
-        self.productioncost = 0 # cost of producing item
-        self.valueList = valueList # list of attribute scores
+        self.sales = 0  # The total amount of products that have been sold
+        self.price = 0  # The price of the product
+        self.productioncost = 0
+        self.valueList = valueList
 
-    def buy(self): # determines if sale is made, product is bought
+    def buy(self):
         self.sales += 1
 
+
 class Attribute:
-    def __init__ (self, name, kanotype, stdev, weight):
+    def __init__(self, name, kano, stdev, weight):
         self.name = name
-        self.kanotype = kanotype
+        self.kanotype = kano
         self.stdev = stdev
         self.weight = weight
 
-    def setkanotype(self,type):
+    def setkanotype(self, type):
         self.kanotype = type
 
 
-class Simulation: # components of simulation, data table + buttons
-    def __init__ (self, table, consumers, days, cost, daysPerTick):
+class Simulation:
+    def __init__(self, table, consumers, days, cost, daysPerTick):
         self.df = table
-        self.consumers = consumers # number of consumers ("buyers")
-        self.days = days # number of days in simulation
-        self.cost = cost # production cost
-        self.daysPerTick = daysPerTick # days per tick in simulation
-        self.ticks = days//daysPerTick # returns days integer values
-    
-        self.profitPerSale = int(self.df.iloc[0, 4]) - self.cost
+        self.consumers = consumers  # number of consumers
+        self.days = days  # number of days in simulation
+        self.cost = cost
+        # TODO: should profit be adjusted for days per tick? this skips days and chances to buy
+        self.daysPerTick = daysPerTick
+        self.ticks = days//daysPerTick # prevents non integer days
 
-        self.attributeDF = self.df.iloc[:, 0:4]
+        self.profitPerSale = int(self.df.iloc[0, 4]) - self.cost # profit calculation
 
-        self.productDF = self.df.iloc[:, 4:]
+        self.attributeDF = self.df.iloc[:, 0:4] # splits data table into attributes dataframe
 
-        self.setAttributes(self.attributeDF)
-        self.setProducts(self.productDF)
+        self.productDF = self.df.iloc[:, 4:] # splits data table into product dataframe
 
-        self.profitDF = {'time': [], 'profit': [] } 
+        self.setAttributes() # set attributes
+        self.setProducts() # set producers
 
-        for i in range(self.ticks):
-            self.consumers = [Consumer(self.df['Stdev'], self.df['Weight'], self.df['Kanotype']) for _ in range(consumers)]
+        self.profitDF = {'time': [], 'profit': []} # dict with time and profit for graphing
 
-            
+        for i in range(self.ticks): # loop that runs every tick
+            self.consumers = [Consumer(
+                self.df['Stdev'], self.df['Weight'], self.df['Kanotype']) for _ in range(consumers)] # for amount of customers specified
+
             for consumer in self.consumers:
-                consumer.pickTopProduct(self.products)
-            # max_obj = max(self.products, key=lambda p: p.sales)
-            self.profitDF['time'].append(i*self.daysPerTick)
-            self.profitDF['profit'].append(self.products[0].sales * self.profitPerSale)
-        
-    def setAttributes(self, attributeDF):
+                consumer.pickTopProduct(self.products) # for every consumer in the list, calls pickTopProduct with list of products in the simulation
+            self.profitDF['time'].append(i*self.daysPerTick) # sets day for x axis on graph
+            self.profitDF['profit'].append( 
+                self.products[0].sales * self.profitPerSale) # sets profit for y axis
+
+    def setAttributes(self):
         attributes = []
         for _, row in self.attributeDF.iterrows():
             attribute = None
@@ -121,21 +139,19 @@ class Simulation: # components of simulation, data table + buttons
                 attribute = Attribute(*row.values)
             attributes.append(attribute)
         self.attributes = attributes
-    
-    def setProducts(self, Product, productDF):
+
+    def setProducts(self):
         products = []
-        for col in productDF:
-            values = productDF[col]
+        for col in self.productDF:
+            values = self.productDF[col]
             products.append(Product(values.values, col))
         self.products = products
 
-
     def getProfitData(self):
         return self.profitDF
-    
-    
+
     def getMarketShares(self):
-        ms = {'name': [], 'sales': [] } # TODO: optimize
+        ms = {'name': [], 'sales': []}  # TODO: look into optimizing this
         for product in self.products:
             ms['name'].append(product.name)
             ms['sales'].append(product.sales)
@@ -147,9 +163,11 @@ class Simulation: # components of simulation, data table + buttons
 
 # -------------------------------------------------------
 
-controls = dbc.Card( # apply button
+
+controls = dbc.Card(  # apply button -- not needed?
     [
-    dbc.Button('Apply', id='submit-button', color='primary', block=True, className='mr-1')
+        dbc.Button('Apply', id='submit-button', color='primary',
+                   block=True, className='mr-1')
     ],
     body=True,
 )
@@ -157,171 +175,217 @@ controls = dbc.Card( # apply button
 # -----------    page layout   ------------------------
 
 
-app.layout = html.Div([ 
-    dbc.Row(dbc.Col(html.H1("ABM Market Simulator"), style={"textAlign": "center"})),
-    dbc.Row(
-        [ 
-            dbc.Col(children=html.Div([
-    html.Div([
-        dcc.Input(
-            id='adding-rows-name',
-            placeholder='Enter a product name...',
-            value='',
-            style={'padding': 10}
-        ),
-        html.Button('Add Product', id='add-column-button', n_clicks=0)
-    ], style={'height': 50}),
-
-    dash_table.DataTable(
-        id='adding-rows-table', # TODO: make price attribute fixed, with satisfier (reversed)
-        columns=[
-            {'name': 'Attribute',
-             'id': 'Attribute',
-             'deletable': False,
-             'renamable': False},
-
-            {'name': 'Kanotype',
-             'id': 'Kanotype',
-             'presentation': 'dropdown',
-             'deletable': False,
-             'renamable': False},
-
-            {'name': 'Stdev',
-             'id': 'Stdev',
-             'deletable': False,
-             'renamable': False},
-
-            {'name': 'Weight',
-             'id': 'Weight',
-             'deletable': False,
-             'renamable': False,
-             'type':'numeric'},
-
-            {'name': 'New Product',
-             'id': 'NewProduct',
-             'deletable': False,
-             'renamable': False,
-             'type':'numeric'},
-
-            {'name': 'Competitor 1',
-             'id': 'Competitor-1',
-             'deletable': False,
-             'renamable': True,
-             'type':'numeric'},             
-        ],
-
-        dropdown={
-            'Kanotype': {
-                'options': [
-                    {'label': i, 'value': i}
-                    for i in KANOTYPES
-                ]
-            }},
-
-
-        data=[
-            {
-                'Attribute': 'Price',
-                'Kanotype': 'satisfier (reversed)', 
-                'Stdev': None,
-                'Weight': None,
-                'New Product': None,
-                'Competitor-1': None
-            }
-            for i in range(1)
-        ],
-        editable=True,
-        row_deletable=True,
-
-        css=[{"selector": ".Select-menu-outer", "rule": "display: block !important"}],
-
-        # TODO: conditionally or manually format the columns that can't be deleted
-
-        # style_data_conditional=[{
-        #     'if': {'column_deletable': False},
-        #     'backgroundColor': 'rgb(30, 30, 30)',
-        #     'color': 'white'
-        # }],
-        # style_header_conditional=[{
-        #     'if': {'column_deletable': False},
-        #     'backgroundColor': 'rgb(30, 30, 30)',
-        #     'color': 'white'
-        # }],
-        
-),
-
-# TODO: put elements in one horizontal row and fix formatting
+app.layout = html.Div([
+    dbc.Row(dbc.Col(html.H1("ABM Market Simulator"),
+                    style={"textAlign": "center"})),
     dbc.Row([
-        dbc.Col(dbc.Button('Add Attribute', id='add-row-button', n_clicks=0), width=2),
-        dbc.Col(dbc.Input(id='consumers-in-market', placeholder='Consumers in market', type='number'), width=2),
-        dbc.Col(dbc.Input(id='days', placeholder='Days to simulate', type='number'), width=2),
-        dbc.Col(dbc.Input(id='daysPerTick', placeholder='Days Per Tick', type='number'), width=2),
-        dbc.Col(dbc.Input(id='production-cost', placeholder='Production cost of new product', type='number'), width=3),
-        dbc.Col(dbc.Button('Run Simulation', id='run-sim'), width=2)
-        ], justify="start")
-]),
+            dbc.Col(children=html.Div([
 
-width=12,style={'background-color': 'rgb(45, 101, 115)'}),
+                dbc.Form([
+                    dbc.Input(
+                        id='adding-rows-name',
+                        placeholder='Enter a product name...',
+                        value='',
+                        style={'width': '250px'},
+                        className="mx-2"
+                    ),
+                    dbc.Button('Add Product',
+                               id='add-column-button', n_clicks=0, className="mr-4"),
+
+                ], inline=True, className='my-2'),
+
+                dash_table.DataTable(
+                    id='adding-rows-table',
+                    columns=[
+                        {'name': 'Attribute',
+                         'id': 'Attribute',
+                         'deletable': False,
+                         'renamable': False},
+
+                        {'name': 'Kanotype',
+                         'id': 'Kanotype',
+                         'presentation': 'dropdown',
+                         'deletable': False,
+                         'renamable': False},
+
+                        {'name': 'Stdev',
+                         'id': 'Stdev',
+                         'deletable': False,
+                         'renamable': False,
+                         'type': 'numeric'},
+
+                        {'name': 'Weight',
+                         'id': 'Weight',
+                         'deletable': False,
+                         'renamable': False,
+                         'type': 'numeric'},
+
+                        {'name': 'New Product',
+                         'id': 'NewProduct',
+                         'deletable': False,
+                         'renamable': False,
+                         'type': 'numeric'},
+
+                        {'name': 'Competitor 1',
+                         'id': 'Competitor-1',
+                         'deletable': False,
+                         'renamable': True,
+                         'type': 'numeric'},
+                    ],
+
+                    dropdown={
+                        'Kanotype': {
+                            'options': [
+                                {'label': i, 'value': i}
+                                for i in KANOTYPES
+                            ]
+                        }},
+
+                    data=[
+                        {
+                            'Attribute': 'Price',
+                            'Kanotype': 'satisfier (reversed)',
+                            'Stdev': None,
+                            'Weight': None,
+                            'NewProduct': None,
+                            'Competitor-1': None
+                        }]+[
+                        {
+                            'Attribute': None,
+                            'Kanotype': None,
+                            'Stdev': None,
+                            'Weight': None,
+                            'NewProduct': None,
+                            'Competitor-1': None
+                        }
+                        for i in range(1)
+                    ],
+                    editable=True,
+                    row_deletable=True,
+
+                    css=[{"selector": ".Select-menu-outer",
+                          "rule": "display: block !important"}],
+                    
+
+                ),
+
+                dbc.Form(
+                    [
+                        dbc.Button('Add Attribute', id='add-row-button',
+                                   n_clicks=0, className="mx-3"),
+                        dbc.FormGroup(
+                            [
+                                # TODO: add html_for tags to the labels to link them with inputs
+                                dbc.Label("Consumers", className="mr-2"),
+                                dbc.Input(
+                                    id='consumers-in-market', placeholder='Enter # of consumers', type='number'),
+                            ],
+                            className="mr-3",
+                        ),
+                        dbc.FormGroup(
+                            [
+                                dbc.Label("Days", className="mr-2"),
+                                dbc.Input(id='days', placeholder='Enter days',
+                                          type='number'),
+                            ],
+                            className="mr-3",
+                        ),
+                        dbc.FormGroup(
+                            [
+                                dbc.Label("Days/Tick", className="mr-2"),
+                                dbc.Input(
+                                    id='daysPerTick', placeholder='Enter days per tick', type='number'),
+                            ],
+                            className="mr-3",
+                        ),
+                        dbc.FormGroup(
+                            [
+                                dbc.Label("Cost", className="mr-2"),
+                                dbc.Input(
+                                    id='production-cost', placeholder='Enter production cost', type='number'),
+                            ],
+                            className="mr-5",
+                        ),
+                        
+                        dbc.Button('Run Simulation',
+                                   id='run-sim', color="success"),
+                    ],
+                    inline=True, className='my-2'),
+            ]),
+
+                width=12, style={'background-color': 'rgb(45, 101, 115)'}),
 
 
-dbc.Col(html.Div(dcc.Graph(id='line-graph')), width=6),
-dbc.Col(html.Div(dcc.Graph(id='pie-chart')), width=6), # fix to make it pie chart
+            dbc.Col(html.Div(dcc.Graph(id='line-graph')), width=6),
+            dbc.Col(html.Div(dcc.Graph(id='pie-chart')), width=6),
+            ])
 ])
-])
-
 
 
 # ------------------ end of layout --------------------
 
-@app.callback( # adds attributes 
+@app.callback(  # adds attributes
     Output('adding-rows-table', 'data'),
     Input('add-row-button', 'n_clicks'),
     State('adding-rows-table', 'data'),
     State('adding-rows-table', 'columns'))
 def add_row(n_clicks, rows, columns):
     if n_clicks > 0:
-        rows.append({c['id']: '' for c in columns})
+        rows.append({c['id']: '' for c in columns}) # TODO: should this set the cells equal to None?
     return rows
 
 
-@app.callback( # adds products
+prevent_initial_call = True
+
+
+@app.callback(  # adds products
     Output('adding-rows-table', 'columns'),
     Input('add-column-button', 'n_clicks'),
     State('adding-rows-name', 'value'),
     State('adding-rows-table', 'columns'))
 def update_columns(n_clicks, value, existing_columns):
     if n_clicks > 0:
+        if not value:
+            value = f"product-{n_clicks}"
         existing_columns.append({
             'id': value, 'name': value, 'editable': True,
             'renamable': True, 'deletable': True
         })
     return existing_columns
 
-@app.callback( # pie chart: market share
-    Output('pie-chart', 'figure'), 
+
+prevent_initial_call = True
+
+
+@app.callback(
+    Output('pie-chart', 'figure'),
     Output('line-graph', 'figure'),
     Input('run-sim', 'n_clicks'),
     State('adding-rows-table', 'data'),
     State('consumers-in-market', 'value'),
     State('production-cost', 'value'),
     State('days', 'value'),
-    State('daysPerTick','value'))
-def generate_chart(n_clicks, table, consumers, cost, days, daysPerTick): 
+    State('daysPerTick', 'value'))
+def generate_chart(n_clicks, table, consumers, cost, days, daysPerTick):
     if n_clicks is None:
         raise PreventUpdate
     else:
         df = pd.DataFrame.from_records(table)
+
         sim = Simulation(df, consumers, int(days), cost, daysPerTick)
 
         ms = sim.getMarketShares()
-        pie = px.pie(ms, values='sales', names='names')
+        pie = px.pie(ms, values='sales', names='name') # pie chart: market share
 
         profit = sim.getProfitData()
-        line = px.line(profit, x='time', y='profit')
-        return pie, line
+        line = px.line(profit, x="time", y="profit") # line graph: profit
+        return pie, line,
+
+
+prevent_initial_call = True
 
 
 # -------------------------------------------------------
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(debug=True, dev_tools_hot_reload=False)

@@ -54,24 +54,16 @@ class Consumer:
                 score = -preference * attribute
             elif kanotype == 'delighter (reversed)':
                 score = preference * math.e ** (-2 * attribute - 1)
-            print("printing util values:")
-            print(kanotype)
-            print(preference)
-            print(attribute)
-            print(score)
-            print()
             return score
 
         result = {}
         for idx, product in enumerate(products): # splitting the 1st value to idx, 2nd to product
             sum = 0
-            print(f"calculating product {idx} for consumer")
+            # print(f"calculating product {idx} for consumer")
             for attribute, preference, kanotype in zip(product.valueList, self.preferences, self.kanotypes): # loop through all at same time in parallel
                 sum += calculateUtilityScore(attribute, preference, kanotype)  # figures out score based on kanotype
             result[idx] = sum # once the score is found, consumer gets list of all products and how they are scored
         chosenIdx = max(result, key=result.get) # consumer choice of product that has best score
-        print(result) # checking result and index
-        print(chosenIdx)
         products[chosenIdx].buy() # consumers buy product
         self.bestProducer = chosenIdx
 

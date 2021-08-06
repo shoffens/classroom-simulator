@@ -305,7 +305,7 @@ app.layout = html.Div([
                     inline=True, className='my-2'),
             ]),
 
-                width=12, style={'background-color': 'rgb(45, 101, 115)'}),
+                width=12, style={'backgroundColor': 'rgb(45, 101, 115)'}),
 
 
             dbc.Col(html.Div(dcc.Graph(id='line-graph')), width=6),

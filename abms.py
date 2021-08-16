@@ -15,8 +15,9 @@ from dash.exceptions import PreventUpdate
 import random
 start_time = time.time()  # tracks execution time
 
-KANOTYPES = ['basic', 'satisfier', 'delighter',
-             'basic (reversed)', 'satisfier (reversed)', 'delighter (reversed)']
+KANOTYPES = ['basic', 'satisfier', 'delighter']
+
+DIRECTIONS = ["higher is better", "lower is better"]
 
 # bootstrap style sheet
 app = dash.Dash(external_stylesheets=[dbc.themes.SOLAR])
@@ -25,10 +26,11 @@ app = dash.Dash(external_stylesheets=[dbc.themes.SOLAR])
 
 
 class Consumer:
-    def __init__(self, stdevs, weights, kanotypes):
+    def __init__(self, stdevs, weights, kanotypes, direction):
         self.setPreferences(stdevs, weights)
         self.bestProducer = 0
         self.kanotypes = kanotypes
+        self.direction = direction
 
     def setPreferences(self, stdevs, weights):  # creates consumer preferences
         self.preferences = []
@@ -39,29 +41,34 @@ class Consumer:
 
     def pickTopProduct(self, products):
         # TODO: add correct kano formulas, determine if attributes/preferences var needed
-        def calculateUtilityScore(attribute, preference, kanotype):
+        def calculateUtilityScore(attribute, preference, kanotype, direction):
             attribute = float(attribute)
             score = 0
-            if kanotype == 'basic':
-                score = preference * (0 - math.e ** (-2 * attribute - 1))
-            elif kanotype == 'satisfier':
-                score = preference * attribute
-            elif kanotype == 'delighter':
-                score = preference * math.e ** (2 * attribute - 1)
-            elif kanotype == 'basic (reversed)':
-                score = preference * (0 - math.e ** (2 * attribute - 1))
-            elif kanotype == 'satisfier (reversed)':
-                score = -preference * attribute
-            elif kanotype == 'delighter (reversed)':
-                score = preference * math.e ** (-2 * attribute - 1)
+            
+            if direction == "lower is better":
+                                # make second column for reversed
+                if kanotype == 'basic':
+                    score = preference * (0 - math.e ** (2 * attribute - 1))
+                elif kanotype == 'satisfier':
+                    score = -preference * attribute
+                elif kanotype == 'delighter':
+                    score = preference * math.e ** (-2 * attribute - 1)
+            else:
+                if kanotype == 'basic':
+                    score = preference * (0 - math.e ** (-2 * attribute - 1))
+                elif kanotype == 'satisfier':
+                    score = preference * attribute
+                elif kanotype == 'delighter':
+                    score = preference * math.e ** (2 * attribute - 1)
+
             return score
 
         result = {}
         for idx, product in enumerate(products): # splitting the 1st value to idx, 2nd to product
             sum = 0
             # print(f"calculating product {idx} for consumer")
-            for attribute, preference, kanotype in zip(product.valueList, self.preferences, self.kanotypes): # loop through all at same time in parallel
-                sum += calculateUtilityScore(attribute, preference, kanotype)  # figures out score based on kanotype
+            for attribute, preference, kanotype, direction in zip(product.valueList, self.preferences, self.kanotypes, self.direction): # loop through all at same time in parallel
+                sum += calculateUtilityScore(attribute, preference, kanotype, direction)  # figures out score based on kanotype
             result[idx] = sum # once the score is found, consumer gets list of all products and how they are scored
         chosenIdx = max(result, key=result.get) # consumer choice of product that has best score
         products[chosenIdx].buy() # consumers buy product
@@ -82,9 +89,10 @@ class Product:
 
 
 class Attribute:
-    def __init__(self, name, kano, stdev, weight):
+    def __init__(self, name, kano, direction, stdev, weight):
         self.name = name
         self.kanotype = kano
+        self.direction = direction
         self.stdev = stdev
         self.weight = weight
 
@@ -102,25 +110,25 @@ class Simulation:
         self.daysPerTick = daysPerTick
         self.ticks = days//daysPerTick # prevents non integer days
 
-        self.profitPerSale = int(self.df.iloc[0, 4]) - self.cost # profit calculation
+        self.profitPerSale = int(self.df.iloc[0, 5]) - self.cost # profit calculation
 
-        self.attributeDF = self.df.iloc[:, 0:4] # splits data table into attributes dataframe
+        self.attributeDF = self.df.iloc[:, 0:5] # splits data table into attributes dataframe
 
-        self.productDF = self.df.iloc[:, 4:] # splits data table into product dataframe
+        self.productDF = self.df.iloc[:, 5:] # splits data table into product dataframe
 
         self.setAttributes() # set attributes
         self.setProducts() # set producers
 
-        self.profitDF = {'time': [], 'profit': []} # dict with time and profit for graphing
+        self.profitDF = {'Time (Days)': [], 'Profit ($)': []} # dict with time and profit for graphing
 
         for i in range(self.ticks): # loop that runs every tick
             self.consumers = [Consumer(
-                self.df['Stdev'], self.df['Weight'], self.df['Kanotype']) for _ in range(consumers)] # for amount of customers specified
+                self.df['Stdev'], self.df['Weight'], self.df['Kanotype'], self.df['Direction']) for _ in range(consumers)] # for amount of customers specified
 
             for consumer in self.consumers:
                 consumer.pickTopProduct(self.products) # for every consumer in the list, calls pickTopProduct with list of products in the simulation
-            self.profitDF['time'].append(i*self.daysPerTick) # sets day for x axis on graph
-            self.profitDF['profit'].append( 
+            self.profitDF['Time (Days)'].append(i*self.daysPerTick) # sets day for x axis on graph
+            self.profitDF['Profit ($)'].append( 
                 self.products[0].sales * self.profitPerSale) # sets profit for y axis
 
     def setAttributes(self):
@@ -143,10 +151,10 @@ class Simulation:
         return self.profitDF
 
     def getMarketShares(self):
-        ms = {'name': [], 'sales': []}  # TODO: look into optimizing this
+        ms = {'Product Name': [], 'Sales': []}
         for product in self.products:
-            ms['name'].append(product.name)
-            ms['sales'].append(product.sales)
+            ms['Product Name'].append(product.name)
+            ms['Sales'].append(product.sales)
         df = pd.DataFrame(ms)
         return df
 
@@ -170,6 +178,12 @@ controls = dbc.Card(  # apply button -- not needed?
 app.layout = html.Div([
     dbc.Row(dbc.Col(html.H1("ABM Market Simulator"),
                     style={"textAlign": "center"})),
+    dbc.Row(dbc.Col(html.P("Welcome to the ABM Market Simulator, where you will simulate your product in the market."),
+                    style={"textAlign":"center", "marginLeft": "75px","marginRight":"75px"})),
+    dbc.Row(dbc.Col(html.P("You will assume the role of the producer developing a new product, and will enter information about the product and its competitors. Consumers will then choose which products to purchase, revealing trends in market share and your new product's profits."),
+                    style={"textAlign":"center", "marginLeft": "75px","marginRight":"75px"})),
+    dbc.Row(dbc.Col(html.P("Add or remove products and attributes by pressing the associated buttons. Rename products by pressing the pencil icon in the cell's header. Click on each cell or tab between them to input information. Score STdev, Weight, and all product scores between 1 and 10. Consumer count and the number of days to simulate will determine the sales in your simulation - aim for 3-5 years (~1000-1800 days). Enter the cost to produce your new product to determine your profits. Press the ""Run Simulation"" button to update the outputs. To analyze the graphs, hover over each to determine an exact number of sales or profits. Drag the cursor over segments of the profit graph to look at a section in greater detail. If the page fails to load at any point, press the ""Run Simulation"" button again; if that fails, refresh the page and reenter the information."),
+                    style={"textAlign":"center", "marginLeft": "75px","marginRight":"75px"})),
     dbc.Row([
             dbc.Col(children=html.Div([
 
@@ -196,6 +210,12 @@ app.layout = html.Div([
 
                         {'name': 'Kanotype',
                          'id': 'Kanotype',
+                         'presentation': 'dropdown',
+                         'deletable': False,
+                         'renamable': False},
+
+                        {'name': 'Direction', # higher/lower is better
+                         'id': 'Direction',
                          'presentation': 'dropdown',
                          'deletable': False,
                          'renamable': False},
@@ -231,12 +251,22 @@ app.layout = html.Div([
                                 {'label': i, 'value': i}
                                 for i in KANOTYPES
                             ]
-                        }},
+                        },
+                        'Direction': {
+                            'options': [
+                                {'label': i, 'value': i}
+                                for i in DIRECTIONS
+                            ]
+                        }
+
+                        
+                        },
 
                     data=[
                         {
                             'Attribute': 'Price',
-                            'Kanotype': 'satisfier (reversed)',
+                            'Kanotype': 'satisfier',
+                            'Direction': 'lower is better',
                             'Stdev': None,
                             'Weight': None,
                             'NewProduct': None,
@@ -245,6 +275,7 @@ app.layout = html.Div([
                         {
                             'Attribute': None,
                             'Kanotype': None,
+                            'Direction': 'higher is better',
                             'Stdev': None,
                             'Weight': None,
                             'NewProduct': None,
@@ -255,11 +286,22 @@ app.layout = html.Div([
                     editable=True,
                     row_deletable=True,
 
+                    style_header={
+                    'backgroundColor': 'rgb(126, 182, 196)',
+                    'color':'darkslategrey',
+                    'fontWeight': 'bold'
+                    },
+
+                    style_cell={
+                    'textAlign': 'right',
+                    'color':'darkslategrey'},
+
                     css=[{"selector": ".Select-menu-outer",
                           "rule": "display: block !important"}],
                     
 
                 ),
+                
 
                 dbc.Form(
                     [
@@ -308,8 +350,8 @@ app.layout = html.Div([
                 width=12, style={'backgroundColor': 'rgb(45, 101, 115)'}),
 
 
-            dbc.Col(html.Div(dcc.Graph(id='line-graph')), width=6),
             dbc.Col(html.Div(dcc.Graph(id='pie-chart')), width=6),
+            dbc.Col(html.Div(dcc.Graph(id='line-graph')), width=6),
             ])
 ])
 
@@ -338,7 +380,7 @@ prevent_initial_call = True
 def update_columns(n_clicks, value, existing_columns):
     if n_clicks > 0:
         if not value:
-            value = f"product-{n_clicks}"
+            value = f"Competitor {n_clicks+1}"
         existing_columns.append({
             'id': value, 'name': value, 'editable': True,
             'renamable': True, 'deletable': True
@@ -367,10 +409,10 @@ def generate_chart(n_clicks, table, consumers, cost, days, daysPerTick):
         sim = Simulation(df, consumers, int(days), cost, daysPerTick)
 
         ms = sim.getMarketShares()
-        pie = px.pie(ms, values='sales', names='name') # pie chart: market share
+        pie = px.pie(ms, values='Sales', names='Product Name',hover_name='Product Name', title='Market Share', color_discrete_sequence=px.colors.qualitative.Prism, ) # pie chart: market share
 
         profit = sim.getProfitData()
-        line = px.line(profit, x="time", y="profit") # line graph: profit
+        line = px.line(profit, x="Time (Days)", y="Profit ($)", title='New Product Cumulative Profit', color_discrete_sequence=px.colors.qualitative.Prism) # line graph: profit
         return pie, line,
 
 

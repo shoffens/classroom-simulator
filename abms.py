@@ -21,6 +21,7 @@ DIRECTIONS = ["higher is better", "lower is better"]
 
 # bootstrap style sheet
 app = dash.Dash(external_stylesheets=[dbc.themes.SOLAR])
+server = app.server
 
 # ---------------
 
@@ -78,6 +79,7 @@ class Product:
     def __init__(self, valueList, name):
         self.name = name
         self.profit = 0 # total profit accumulated for new product (starting with no profit)
+        self.dailySales = 0
         self.sales = 0  # The total amount of products that have been sold
         self.price = 0  # The price of the product
         self.productioncost = 0
@@ -85,6 +87,11 @@ class Product:
 
     def buy(self):
         self.sales += 1
+        self.dailySales += 1
+    
+    def resetDailySales(self):
+        self.dailySales = 0
+
 
 
 class Attribute:
@@ -105,7 +112,6 @@ class Simulation:
         self.consumers = consumers  # number of consumers
         self.days = days  # number of days in simulation
         self.cost = cost
-        # TODO: should profit be adjusted for days per tick? this skips days and chances to buy
         self.daysPerTick = daysPerTick
         self.ticks = days//daysPerTick # prevents non integer days
 
@@ -120,6 +126,8 @@ class Simulation:
 
         self.profitDF = {'Time (Days)': [], 'Profit ($)': []} # dict with time and profit for graphing
 
+        self.noncumulativeprofitDF = {'Time (Days)': [], 'Profit ($)': []} # dict with time and non cumulative profit for graphing
+
         for i in range(self.ticks): # loop that runs every tick
             self.consumers = [Consumer(
                 self.df['Stdev'], self.df['Weight'], self.df['Kanotype'], self.df['Direction']) for _ in range(consumers)] # for amount of customers specified
@@ -127,8 +135,12 @@ class Simulation:
             for consumer in self.consumers:
                 consumer.pickTopProduct(self.products) # for every consumer in the list, calls pickTopProduct with list of products in the simulation
             self.profitDF['Time (Days)'].append(i*self.daysPerTick) # sets day for x axis on graph
-            self.profitDF['Profit ($)'].append( 
-                self.products[0].sales * self.profitPerSale) # sets profit for y axis
+            self.profitDF['Profit ($)'].append(self.products[0].sales * self.profitPerSale) # sets profit for y axis
+            # -------------------------
+            self.noncumulativeprofitDF['Time (Days)'].append(i*self.daysPerTick) # sets day for x axis on graph
+            self.noncumulativeprofitDF['Profit ($)'].append(self.products[0].dailySales * self.profitPerSale) # sets profit for y axis
+            self.products[0].resetDailySales()
+            # --------------------------
 
     def setAttributes(self):
         attributes = []
@@ -149,6 +161,9 @@ class Simulation:
     def getProfitData(self):
         return self.profitDF
 
+    def getNonCumulativeProfitData(self):
+        return self.noncumulativeprofitDF
+
     def getMarketShares(self):
         ms = {'Product Name': [], 'Sales': []}
         for product in self.products:
@@ -157,13 +172,10 @@ class Simulation:
         df = pd.DataFrame(ms)
         return df
 
-    # def generate_df(self): # generates dataframe
-    #  TODO: do appropriate calculations and return market share and profit dataframes, or one that is later sliced
-
 # -------------------------------------------------------
 
 
-controls = dbc.Card(  # apply button -- not needed?
+controls = dbc.Card(
     [
         dbc.Button('Apply', id='submit-button', color='primary',
                    block=True, className='mr-1')
@@ -308,7 +320,6 @@ app.layout = html.Div([
                                    n_clicks=0, className="mx-3"),
                         dbc.FormGroup(
                             [
-                                # TODO: add html_for tags to the labels to link them with inputs
                                 dbc.Label("Consumers", className="mr-2"),
                                 dbc.Input(
                                     id='consumers-in-market', placeholder='Enter # of consumers', type='number'),
@@ -349,8 +360,9 @@ app.layout = html.Div([
                 width=12, style={'backgroundColor': 'rgb(45, 101, 115)'}),
 
 
-            dbc.Col(html.Div(dcc.Graph(id='pie-chart')), width=6),
-            dbc.Col(html.Div(dcc.Graph(id='line-graph')), width=6),
+            dbc.Col(html.Div(dcc.Graph(id='pie-chart')), width=4),
+            dbc.Col(html.Div(dcc.Graph(id='line-graph')), width=4),
+            dbc.Col(html.Div(dcc.Graph(id='bar-graph-noncum')), width=4),
             ])
 ])
 
@@ -393,6 +405,7 @@ prevent_initial_call = True
 @app.callback(
     Output('pie-chart', 'figure'),
     Output('line-graph', 'figure'),
+    Output('bar-graph-noncum', 'figure'),
     Input('run-sim', 'n_clicks'),
     State('adding-rows-table', 'data'),
     State('consumers-in-market', 'value'),
@@ -412,7 +425,11 @@ def generate_chart(n_clicks, table, consumers, cost, days, daysPerTick):
 
         profit = sim.getProfitData()
         line = px.line(profit, x="Time (Days)", y="Profit ($)", title='New Product Cumulative Profit', color_discrete_sequence=px.colors.qualitative.Prism) # line graph: profit
-        return pie, line,
+       
+        noncumulativeprofit = sim.getNonCumulativeProfitData()
+        noncumbar = px.bar(noncumulativeprofit, x="Time (Days)", y="Profit ($)", title='New Product Non-Cumulative Profit', color_discrete_sequence=px.colors.qualitative.Prism) # line graph: profit non cumulative
+        
+        return pie, line, noncumbar
 
 
 prevent_initial_call = True

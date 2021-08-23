@@ -1,1 +1,1 @@
-web: python abms.py
+web: gunicorn abms:server

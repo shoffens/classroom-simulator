@@ -185,6 +185,20 @@ controls = dbc.Card(
 
 # -----------    page layout   ------------------------
 
+instructions = [
+    'All cells must be filled in for the simulation to run properly.', 
+    'Add or remove products and attributes by pressing the associated buttons', 
+    'Rename products by pressing the pencil icon in the cell\'s header',
+    'Remove products by pressing the trash icon in the cell\'s header.',
+    'Click on each cell or tab between them to input information',
+    'Score STDev, Weight, and all product scores between 1 and 10',
+    'Consumer count and number of days to simulate will determine the sales in your simulation - aim for 3-5 years (~1000-1800 days).',
+    'Enter the cost to produce your new product to determine your profits',
+    'Press the Run Simulation button to update the outputs, only when every cell is filled.',
+    'To analyze the graphs, hover over each to determine an exact number of sales or profits.',
+    'If the page fails to load at any point, press the Run Simulation button again; if that fails, refresh the page and reenter the information'
+    
+    ]
 
 app.layout = html.Div([
     dbc.Row(dbc.Col(html.H1("ABM Market Simulator"),
@@ -193,8 +207,9 @@ app.layout = html.Div([
                     style={"textAlign":"center", "marginLeft": "75px","marginRight":"75px"})),
     dbc.Row(dbc.Col(html.P("You will assume the role of the producer developing a new product, and will enter information about the product and its competitors. Consumers will then choose which products to purchase, revealing trends in market share and your new product's profits."),
                     style={"textAlign":"center", "marginLeft": "75px","marginRight":"75px"})),
-    dbc.Row(dbc.Col(html.P("Add or remove products and attributes by pressing the associated buttons. Rename products by pressing the pencil icon in the cell's header. Click on each cell or tab between them to input information. Score STdev, Weight, and all product scores between 1 and 10. Consumer count and the number of days to simulate will determine the sales in your simulation - aim for 3-5 years (~1000-1800 days). Enter the cost to produce your new product to determine your profits. Press the ""Run Simulation"" button to update the outputs. To analyze the graphs, hover over each to determine an exact number of sales or profits. Drag the cursor over segments of the profit graph to look at a section in greater detail. If the page fails to load at any point, press the ""Run Simulation"" button again; if that fails, refresh the page and reenter the information."),
-                    style={"textAlign":"center", "marginLeft": "75px","marginRight":"75px"})),
+    dbc.Row(dbc.Col(children=[html.Ul(id='list', children=[html.Li(i) for i in instructions])],
+                    style={"textAlign":"left", "marginLeft": "290px","marginRight":"75px"})),
+                    
     dbc.Row([
             dbc.Col(children=html.Div([
 

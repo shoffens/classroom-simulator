@@ -200,6 +200,12 @@ instructions = [
     
     ]
 
+kanotooltip = [
+    'Basic: A necessary attribute that does not impact consumer’s happiness if it is included, but greatly dissatisfies consumers if it is absent.',
+    'Satisfier: An attribute that is expected to be included in a product, and its effect on consumer satisfaction increases linearly with its inclusion.',
+    'Delighter: A luxury attribute that is nice to have, it greatly increases consumer satisfaction if included. If absent, the consumer does not miss it.'
+]
+
 app.layout = html.Div([
     dbc.Row(dbc.Col(html.H1("ABM Market Simulator"),
                     style={"textAlign": "center"})),
@@ -293,10 +299,10 @@ app.layout = html.Div([
                             'Attribute': 'Price',
                             'Kanotype': 'satisfier',
                             'Direction': 'lower is better',
-                            'Stdev': None,
-                            'Weight': None,
-                            'NewProduct': None,
-                            'Competitor-1': None
+                            'Stdev': '5',
+                            'Weight': '5',
+                            'NewProduct': '20',
+                            'Competitor-1': '50'
                         }]+[
                         {
                             'Attribute': None,
@@ -312,15 +318,38 @@ app.layout = html.Div([
                     editable=True,
                     row_deletable=True,
 
+                    tooltip_header={
+                        'Kanotype': 'Basic: necessary, Satisfier: expected, Delighter: nice to have',
+                        # 'Kanotype': html.Ul(id='list', children=[html.Li(i) for i in kanotooltip]),
+                        'Direction': 'For positive attributes, higher score is better vs. negative attributes, where lower score is better',
+                        'Stdev': 'Number in the range of 0 - 10',
+                        'Weight': 'Number in the range of 1 - 10',
+                        'NewProduct': 'Besides price, use number in range of 0 - 10'
+                    },
+
+                    # indicate tooltip with dotted line
+                    style_header_conditional=[{
+                        'if': {'column_id': col},
+                        'textDecoration': 'underline',
+                        'textDecorationStyle': 'dotted',
+                    } for col in ['Kanotype', 'Direction', 'Stdev', 'Weight', 'NewProduct']],
+
+                    style_cell={
+                        'textAlign': 'right',
+                        'color':'darkslategrey',
+                        'overflow': 'hidden',
+                        'textOverflow': 'ellipsis',
+                        'maxWidth': 0,
+                    },
+                    tooltip_delay=0,
+                    tooltip_duration=None,
+
+
                     style_header={
                     'backgroundColor': 'rgb(126, 182, 196)',
                     'color':'darkslategrey',
                     'fontWeight': 'bold'
                     },
-
-                    style_cell={
-                    'textAlign': 'right',
-                    'color':'darkslategrey'},
 
                     css=[{"selector": ".Select-menu-outer",
                           "rule": "display: block !important"}],
@@ -377,7 +406,7 @@ app.layout = html.Div([
 
             dbc.Col(html.Div(dcc.Graph(id='pie-chart')), width=4),
             dbc.Col(html.Div(dcc.Graph(id='line-graph')), width=4),
-            dbc.Col(html.Div(dcc.Graph(id='bar-graph-noncum')), width=4),
+            dbc.Col(html.Div(dcc.Graph(id='bar-graph-noncum')), width=4)
             ])
 ])
 

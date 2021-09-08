@@ -15,9 +15,9 @@ from dash.exceptions import PreventUpdate
 import random
 start_time = time.time()  # tracks execution time
 
-KANOTYPES = ['basic', 'satisfier', 'delighter']
+KANOTYPES = ['basic', 'satisfier', 'delighter'] # kano types
 
-DIRECTIONS = ["higher is better", "lower is better"]
+DIRECTIONS = ["higher is better", "lower is better"] # indicates reversed kano types
 
 # bootstrap style sheet
 app = dash.Dash(external_stylesheets=[dbc.themes.SOLAR])
@@ -40,21 +40,20 @@ class Consumer:
                 sigma=stdev, mean=1) * weight # weighted preference with degree of randomness
             self.preferences.append(weightedPreference)
 
-    def pickTopProduct(self, products):
-        # TODO: add correct kano formulas, determine if attributes/preferences var needed
+    def pickTopProduct(self, products): # kano type formulas
         def calculateUtilityScore(attribute, preference, kanotype, direction):
             attribute = float(attribute)
             score = 0
             
             if direction == "lower is better":
-                                # make second column for reversed
+    
                 if kanotype == 'basic':
                     score = preference * (0 - math.e ** (2 * attribute - 1))
                 elif kanotype == 'satisfier':
                     score = -preference * attribute
                 elif kanotype == 'delighter':
                     score = preference * math.e ** (-2 * attribute - 1)
-            else:
+            else: # reversed kano types
                 if kanotype == 'basic':
                     score = preference * (0 - math.e ** (-2 * attribute - 1))
                 elif kanotype == 'satisfier':
@@ -95,7 +94,7 @@ class Product:
 
 
 class Attribute:
-    def __init__(self, name, kano, direction, stdev, weight):
+    def __init__(self, name, kano, direction, stdev, weight): # data table columns, product attributes
         self.name = name
         self.kanotype = kano
         self.direction = direction
@@ -107,13 +106,13 @@ class Attribute:
 
 
 class Simulation:
-    def __init__(self, table, consumers, days, cost, daysPerTick):
+    def __init__(self, table, consumers, months, cost, monthsPerTick):
         self.df = table
         self.consumers = consumers  # number of consumers
-        self.days = days  # number of days in simulation
+        self.months = months  # number of months in simulation
         self.cost = cost
-        self.daysPerTick = daysPerTick
-        self.ticks = days//daysPerTick # prevents non integer days
+        self.monthsPerTick = monthsPerTick
+        self.ticks = months//monthsPerTick # prevents non integer months
 
         self.profitPerSale = int(self.df.iloc[0, 5]) - self.cost # profit calculation
 
@@ -124,9 +123,9 @@ class Simulation:
         self.setAttributes() # set attributes
         self.setProducts() # set producers
 
-        self.profitDF = {'Time (Days)': [], 'Profit ($)': []} # dict with time and profit for graphing
+        self.profitDF = {'Time (Months)': [], 'Profit ($)': []} # dict with time and profit for graphing
 
-        self.noncumulativeprofitDF = {'Time (Days)': [], 'Profit ($)': []} # dict with time and non cumulative profit for graphing
+        self.noncumulativeprofitDF = {'Time (Months)': [], 'Profit ($)': []} # dict with time and non cumulative profit for graphing
 
         for i in range(self.ticks): # loop that runs every tick
             self.consumers = [Consumer(
@@ -134,10 +133,10 @@ class Simulation:
 
             for consumer in self.consumers:
                 consumer.pickTopProduct(self.products) # for every consumer in the list, calls pickTopProduct with list of products in the simulation
-            self.profitDF['Time (Days)'].append(i*self.daysPerTick) # sets day for x axis on graph
+            self.profitDF['Time (Months)'].append(i*self.monthsPerTick) # sets month for x axis on graph
             self.profitDF['Profit ($)'].append(self.products[0].sales * self.profitPerSale) # sets profit for y axis
             # -------------------------
-            self.noncumulativeprofitDF['Time (Days)'].append(i*self.daysPerTick) # sets day for x axis on graph
+            self.noncumulativeprofitDF['Time (Months)'].append(i*self.monthsPerTick) # sets month for x axis on graph
             self.noncumulativeprofitDF['Profit ($)'].append(self.products[0].dailySales * self.profitPerSale) # sets profit for y axis
             self.products[0].resetDailySales()
             # --------------------------
@@ -192,7 +191,7 @@ instructions = [
     'Remove products by pressing the trash icon in the cell\'s header.',
     'Click on each cell or tab between them to input information',
     'Score STDev, Weight, and all product scores between 1 and 10',
-    'Consumer count and number of days to simulate will determine the sales in your simulation - aim for 3-5 years (~1000-1800 days).',
+    'Consumer count and number of months to simulate will determine the sales in your simulation - aim for 3-5 years',
     'Enter the cost to produce your new product to determine your profits',
     'Press the Run Simulation button to update the outputs, only when every cell is filled.',
     'To analyze the graphs, hover over each to determine an exact number of sales or profits.',
@@ -372,17 +371,17 @@ app.layout = html.Div([
                         ),
                         dbc.FormGroup(
                             [
-                                dbc.Label("Days", className="mr-2"),
-                                dbc.Input(id='days', placeholder='Enter days',
+                                dbc.Label("Months", className="mr-2"),
+                                dbc.Input(id='Months', placeholder='Enter months',
                                           type='number'),
                             ],
                             className="mr-3",
                         ),
                         dbc.FormGroup(
                             [
-                                dbc.Label("Days/Tick", className="mr-2"),
+                                dbc.Label("Months/Tick", className="mr-2"),
                                 dbc.Input(
-                                    id='daysPerTick', placeholder='Enter days per tick', type='number'),
+                                    id='monthsPerTick', placeholder='Enter months per tick', type='number'),
                             ],
                             className="mr-3",
                         ),
@@ -454,24 +453,24 @@ prevent_initial_call = True
     State('adding-rows-table', 'data'),
     State('consumers-in-market', 'value'),
     State('production-cost', 'value'),
-    State('days', 'value'),
-    State('daysPerTick', 'value'))
-def generate_chart(n_clicks, table, consumers, cost, days, daysPerTick):
+    State('months', 'value'),
+    State('monthsPerTick', 'value'))
+def generate_chart(n_clicks, table, consumers, cost, months, monthsPerTick):
     if n_clicks is None:
         raise PreventUpdate
     else:
         df = pd.DataFrame.from_records(table)
 
-        sim = Simulation(df, consumers, int(days), cost, daysPerTick)
+        sim = Simulation(df, consumers, int(months), cost, monthsPerTick)
 
         ms = sim.getMarketShares()
         pie = px.pie(ms, values='Sales', names='Product Name',hover_name='Product Name', title='Market Share', color_discrete_sequence=px.colors.qualitative.Prism, ) # pie chart: market share
 
         profit = sim.getProfitData()
-        line = px.line(profit, x="Time (Days)", y="Profit ($)", title='New Product Cumulative Profit', color_discrete_sequence=px.colors.qualitative.Prism) # line graph: profit
+        line = px.line(profit, x="Time (Months)", y="Profit ($)", title='New Product Cumulative Profit', color_discrete_sequence=px.colors.qualitative.Prism) # line graph: profit
        
         noncumulativeprofit = sim.getNonCumulativeProfitData()
-        noncumbar = px.bar(noncumulativeprofit, x="Time (Days)", y="Profit ($)", title='New Product Non-Cumulative Profit', color_discrete_sequence=px.colors.qualitative.Prism) # line graph: profit non cumulative
+        noncumbar = px.bar(noncumulativeprofit, x="Time (Months)", y="Profit ($)", title='New Product Non-Cumulative Profit', color_discrete_sequence=px.colors.qualitative.Prism) # line graph: profit non cumulative
         
         return pie, line, noncumbar
 

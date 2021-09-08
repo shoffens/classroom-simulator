@@ -78,7 +78,7 @@ class Product:
     def __init__(self, valueList, name):
         self.name = name
         self.profit = 0 # total profit accumulated for new product (starting with no profit)
-        self.dailySales = 0
+        self.monthlySales = 0
         self.sales = 0  # The total amount of products that have been sold
         self.price = 0  # The price of the product
         self.productioncost = 0
@@ -86,10 +86,10 @@ class Product:
 
     def buy(self):
         self.sales += 1
-        self.dailySales += 1
+        self.monthlySales += 1
     
-    def resetDailySales(self):
-        self.dailySales = 0
+    def resetmonthlySales(self):
+        self.monthlySales = 0
 
 
 
@@ -137,8 +137,8 @@ class Simulation:
             self.profitDF['Profit ($)'].append(self.products[0].sales * self.profitPerSale) # sets profit for y axis
             # -------------------------
             self.noncumulativeprofitDF['Time (Months)'].append(i*self.monthsPerTick) # sets month for x axis on graph
-            self.noncumulativeprofitDF['Profit ($)'].append(self.products[0].dailySales * self.profitPerSale) # sets profit for y axis
-            self.products[0].resetDailySales()
+            self.noncumulativeprofitDF['Profit ($)'].append(self.products[0].monthlySales * self.profitPerSale) # sets profit for y axis
+            self.products[0].resetmonthlySales()
             # --------------------------
 
     def setAttributes(self):
@@ -196,7 +196,7 @@ instructions = [
     'Press the Run Simulation button to update the outputs, only when every cell is filled.',
     'To analyze the graphs, hover over each to determine an exact number of sales or profits.',
     'If the page fails to load at any point, press the Run Simulation button again; if that fails, refresh the page and reenter the information'
-    
+    'Install necessary libraries using the requirements.txt file: https://github.com/whitmd/ie-summer'
     ]
 
 kanotooltip = [

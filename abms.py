@@ -65,17 +65,6 @@ class Consumer:
 
             return score
 
-        result = {}
-        for idx, product in enumerate(products): # splitting the 1st value to idx, 2nd to product
-            sum = 0
-            for attribute, preference, kanotype, direction in zip(product.valueList, self.preferences, self.kanotypes, self.direction): # loop through all at same time in parallel
-                sum += calculateUtilityScore(attribute, preference, kanotype, direction)  # figures out score based on kanotype
-            result[idx] = sum # once the score is found, consumer gets list of all products and how they are scored
-        chosenIdx = max(result, key=result.get) # consumer choice of product that has best score
-        products[chosenIdx].buy() # consumers buy product
-        self.bestProducer = chosenIdx
-
-=======
         if self.ownedProductRemainingLifespan > 0:
             self.ownedProductRemainingLifespan -= self.monthsPerTick
             
@@ -99,24 +88,22 @@ class Product:
         self.profit = 0 # total profit accumulated for new product (starting with no profit)
         self.monthlySales = 0
         self.sales = 0  # The total amount of products that have been sold
-        self.price = 0  # The price of the product
+        self.price = valueList[1]  # The price of the product
         self.productioncost = 0
         self.valueList = valueList
-=======
         self.lifespan = float(valueList[0]) 
         self.remainingLifespan = 0
 
     def buy(self):
         self.sales += 1
         self.monthlySales += 1
+        self.remainingLifespan = 0
     
-    def resetmonthlySales(self):
+    def resetmonthlySales(self): # remove?
         self.monthlySales = 0
 
-=======
     def decreaseLifespan(self):
         self.remainingLifespan -= monthsPerTick
-
 
 
 
@@ -142,8 +129,6 @@ class Simulation:
         self.ticks = int(months/monthsPerTick) # prevents non integer months
 
         self.profitPerSale = int(self.df.iloc[0, 5]) - self.cost # profit calculation
-=======
-        self.profitPerSale = int(self.df.iat[1, 5]) - self.cost # profit calculation
 
         self.attributeDF = self.df.iloc[:, 0:5] # splits data table into attributes dataframe
 
@@ -486,13 +471,6 @@ prevent_initial_call = True
     State('production-cost', 'value'),
     State('months', 'value'),
     State('monthsPerTick', 'value'))
-def generate_chart(n_clicks, table, consumers, cost, months, monthsPerTick):
-    if n_clicks is None:
-        raise PreventUpdate
-    else:
-        df = pd.DataFrame.from_records(table)
-
-=======
     
 def generate_chart(n_clicks, table, columns, consumers, cost, months, monthsPerTick):
     if n_clicks is None:

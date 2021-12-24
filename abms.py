@@ -33,11 +33,13 @@ class Consumer:
         self.kanotypes = kanotypes
         self.direction = direction
 
+
+
     def setPreferences(self, stdevs, weights):  # creates consumer preferences
         self.preferences = []
-        for stdev, weight in zip(stdevs, weights):
+        for stdev, weight in zip(stdevs.values, weights.values):
             weightedPreference = np.random.lognormal(
-                sigma=stdev, mean=1) * weight # weighted preference with degree of randomness
+                sigma=float(stdev), mean=1) * float(weight) # weighted preference with degree of randomness
             self.preferences.append(weightedPreference)
 
     def pickTopProduct(self, products): # kano type formulas
@@ -73,6 +75,23 @@ class Consumer:
         products[chosenIdx].buy() # consumers buy product
         self.bestProducer = chosenIdx
 
+=======
+        if self.ownedProductRemainingLifespan > 0:
+            self.ownedProductRemainingLifespan -= self.monthsPerTick
+            
+        else:
+            # utility score calculation
+            result = {}
+            for idx, product in enumerate(products): # splitting the 1st value to idx, 2nd to product
+                sum = 0
+                for attribute, preference, kanotype, direction in zip(product.valueList, self.preferences, self.kanotypes, self.direction): # loop through all at same time in parallel
+                    sum += calculateUtilityScore(attribute, preference, kanotype, direction)  # figures out score based on kanotype
+                result[idx] = sum # once the score is found, consumer gets list of all products and how they are scored
+
+            chosenIdx = max(result, key=result.get) # consumer choice of product that has best score
+            products[chosenIdx].buy() # consumers buy product
+            self.ownedProductRemainingLifespan = products[chosenIdx].lifespan
+            self.bestProducer = chosenIdx
 
 class Product:
     def __init__(self, valueList, name):
@@ -83,6 +102,9 @@ class Product:
         self.price = 0  # The price of the product
         self.productioncost = 0
         self.valueList = valueList
+=======
+        self.lifespan = float(valueList[0]) 
+        self.remainingLifespan = 0
 
     def buy(self):
         self.sales += 1
@@ -90,6 +112,11 @@ class Product:
     
     def resetmonthlySales(self):
         self.monthlySales = 0
+
+=======
+    def decreaseLifespan(self):
+        self.remainingLifespan -= monthsPerTick
+
 
 
 
@@ -112,9 +139,11 @@ class Simulation:
         self.months = months  # number of months in simulation
         self.cost = cost
         self.monthsPerTick = monthsPerTick
-        self.ticks = months//monthsPerTick # prevents non integer months
+        self.ticks = int(months/monthsPerTick) # prevents non integer months
 
         self.profitPerSale = int(self.df.iloc[0, 5]) - self.cost # profit calculation
+=======
+        self.profitPerSale = int(self.df.iat[1, 5]) - self.cost # profit calculation
 
         self.attributeDF = self.df.iloc[:, 0:5] # splits data table into attributes dataframe
 
@@ -147,6 +176,7 @@ class Simulation:
             attribute = None
             if not None in row.values:
                 attribute = Attribute(*row.values)
+            print(attribute)
             attributes.append(attribute)
         self.attributes = attributes
 
@@ -312,7 +342,7 @@ app.layout = html.Div([
                             'NewProduct': None,
                             'Competitor-1': None
                         }
-                        for i in range(1)
+                        for i in range(1) # how many additional attributes to make by default
                     ],
                     editable=True,
                     row_deletable=True,
@@ -451,6 +481,7 @@ prevent_initial_call = True
     Output('bar-graph-noncum', 'figure'),
     Input('run-sim', 'n_clicks'),
     State('adding-rows-table', 'data'),
+    State('adding-rows-table', 'columns'),
     State('consumers-in-market', 'value'),
     State('production-cost', 'value'),
     State('months', 'value'),
@@ -461,6 +492,18 @@ def generate_chart(n_clicks, table, consumers, cost, months, monthsPerTick):
     else:
         df = pd.DataFrame.from_records(table)
 
+=======
+    
+def generate_chart(n_clicks, table, columns, consumers, cost, months, monthsPerTick):
+    if n_clicks is None:
+        raise PreventUpdate
+    else:
+        print("table:")
+        print(table)
+        print("columns:")
+        print([c['id'] for c in columns])
+        df = pd.DataFrame.from_records(table, columns=[c['id'] for c in columns])
+        print(df)
         sim = Simulation(df, consumers, int(months), cost, monthsPerTick)
 
         ms = sim.getMarketShares()
@@ -477,6 +520,8 @@ def generate_chart(n_clicks, table, consumers, cost, months, monthsPerTick):
 
 prevent_initial_call = True
 
+
+suppress_callback_exceptions=False
 
 # -------------------------------------------------------
 

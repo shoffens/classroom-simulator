@@ -1,18 +1,18 @@
-from types import new_class
+
 import pandas as pd
 import math
 import numpy as np
 import dash
-import dash_core_components as dcc
-import dash_html_components as html
+from dash import dcc
+from dash import html
+# from dash import dbc
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 import plotly.express as px
 from statistics import mean
 import time
-import dash_table
+from dash import dash_table
 from dash.exceptions import PreventUpdate
-import random
 start_time = time.time()  # tracks execution time
 
 KANOTYPES = ['basic', 'satisfier', 'delighter'] # kano types
@@ -27,11 +27,13 @@ server = app.server
 
 
 class Consumer:
-    def __init__(self, stdevs, weights, kanotypes, direction):
+    def __init__(self, stdevs, weights, kanotypes, direction, monthsPerTick):
         self.setPreferences(stdevs, weights)
         self.bestProducer = 0
         self.kanotypes = kanotypes
         self.direction = direction
+        self.ownedProductRemainingLifespan = 0
+        self.monthsPerTick = monthsPerTick
 
 
 
@@ -49,13 +51,13 @@ class Consumer:
             
             if direction == "lower is better":
     
-                if kanotype == 'basic':
+                if kanotype == 'basic': # reversed kano types
                     score = preference * (0 - math.e ** (2 * attribute - 1))
                 elif kanotype == 'satisfier':
                     score = -preference * attribute
                 elif kanotype == 'delighter':
                     score = preference * math.e ** (-2 * attribute - 1)
-            else: # reversed kano types
+            else: # normal kano types
                 if kanotype == 'basic':
                     score = preference * (0 - math.e ** (-2 * attribute - 1))
                 elif kanotype == 'satisfier':
@@ -64,6 +66,7 @@ class Consumer:
                     score = preference * math.e ** (2 * attribute - 1)
 
             return score
+
 
         if self.ownedProductRemainingLifespan > 0:
             self.ownedProductRemainingLifespan -= self.monthsPerTick
@@ -107,6 +110,7 @@ class Product:
 
 
 
+
 class Attribute:
     def __init__(self, name, kano, direction, stdev, weight): # data table columns, product attributes
         self.name = name
@@ -128,7 +132,7 @@ class Simulation:
         self.monthsPerTick = monthsPerTick
         self.ticks = int(months/monthsPerTick) # prevents non integer months
 
-        self.profitPerSale = int(self.df.iloc[0, 5]) - self.cost # profit calculation
+        self.profitPerSale = int(self.df.iat[1, 5]) - self.cost # profit calculation
 
         self.attributeDF = self.df.iloc[:, 0:5] # splits data table into attributes dataframe
 
@@ -141,10 +145,10 @@ class Simulation:
 
         self.noncumulativeprofitDF = {'Time (Months)': [], 'Profit ($)': []} # dict with time and non cumulative profit for graphing
 
-        for i in range(self.ticks): # loop that runs every tick
-            self.consumers = [Consumer(
-                self.df['Stdev'], self.df['Weight'], self.df['Kanotype'], self.df['Direction']) for _ in range(consumers)] # for amount of customers specified
+        self.consumers = [Consumer(
+                self.df['Stdev'], self.df['Weight'], self.df['Kanotype'], self.df['Direction'], self.monthsPerTick) for _ in range(consumers)] # for amount of customers specified
 
+        for i in range(self.ticks): # loop that runs every tick
             for consumer in self.consumers:
                 consumer.pickTopProduct(self.products) # for every consumer in the list, calls pickTopProduct with list of products in the simulation
             self.profitDF['Time (Months)'].append(i*self.monthsPerTick) # sets month for x axis on graph
@@ -210,7 +214,7 @@ instructions = [
     'Enter the cost to produce your new product to determine your profits',
     'Press the Run Simulation button to update the outputs, only when every cell is filled.',
     'To analyze the graphs, hover over each to determine an exact number of sales or profits.',
-    'If the page fails to load at any point, press the Run Simulation button again; if that fails, refresh the page and reenter the information'
+    'If the page fails to load at any point, press the Run Simulation button again; if that fails, refresh the page and reenter the information',
     'Install necessary libraries using the requirements.txt file: https://github.com/whitmd/ie-summer'
     ]
 
@@ -310,6 +314,15 @@ app.layout = html.Div([
 
                     data=[
                         {
+                            'Attribute': 'Lifespan (months)',
+                            'Kanotype': 'satisfier',
+                            'Direction': 'higher is better',
+                            'Stdev': '5',
+                            'Weight': '5',
+                            'NewProduct': '12',
+                            'Competitor-1': '3'
+                        }]+[
+                        {
                             'Attribute': 'Price',
                             'Kanotype': 'satisfier',
                             'Direction': 'lower is better',
@@ -342,21 +355,21 @@ app.layout = html.Div([
                     },
 
                     # indicate tooltip with dotted line
-                    style_header_conditional=[{
-                        'if': {'column_id': col},
-                        'textDecoration': 'underline',
-                        'textDecorationStyle': 'dotted',
-                    } for col in ['Kanotype', 'Direction', 'Stdev', 'Weight', 'NewProduct']],
+                    # style_header_conditional=[{
+                    #     'if': {'column_id': col},
+                    #     'textDecoration': 'underline',
+                    #     'textDecorationStyle': 'dotted',
+                    # } for col in ['Kanotype', 'Direction', 'Stdev', 'Weight', 'NewProduct']],
 
-                    style_cell={
-                        'textAlign': 'right',
-                        'color':'darkslategrey',
-                        'overflow': 'hidden',
-                        'textOverflow': 'ellipsis',
-                        'maxWidth': 0,
-                    },
-                    tooltip_delay=0,
-                    tooltip_duration=None,
+                    # style_cell={
+                    #     'textAlign': 'right',
+                    #     'color':'darkslategrey',
+                    #     'overflow': 'hidden',
+                    #     'textOverflow': 'ellipsis',
+                    #     'maxWidth': 0,
+                    # },
+                    # tooltip_delay=0,
+                    # tooltip_duration=None,
 
 
                     style_header={
@@ -387,7 +400,7 @@ app.layout = html.Div([
                         dbc.FormGroup(
                             [
                                 dbc.Label("Months", className="mr-2"),
-                                dbc.Input(id='Months', placeholder='Enter months',
+                                dbc.Input(id='months', placeholder='Enter months',
                                           type='number'),
                             ],
                             className="mr-3",

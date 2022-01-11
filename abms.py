@@ -203,22 +203,17 @@ controls = dbc.Card(
 # -----------    page layout   ------------------------
 
 instructions = [
-    'All cells must be filled in for the simulation to run properly.', 
-    'Add or remove products and attributes by pressing the associated buttons', 
-    'Rename products by pressing the pencil icon in the cell\'s header',
-    'Remove products by pressing the trash icon in the cell\'s header.',
-    'Click on each cell or tab between them to input information',
-    'Score STDev, Weight, and all product scores between 1 and 10',
-    'Consumer count and number of months to simulate will determine the sales in your simulation - aim for 3-5 years',
-    'Enter the cost to produce your new product to determine your profits',
-    'Press the Run Simulation button to update the outputs, only when every cell is filled.',
-    'To analyze the graphs, hover over each to determine an exact number of sales or profits.',
-    'If the page fails to load at any point, press the Run Simulation button again; if that fails, refresh the page and reenter the information',
-    'Install necessary libraries using the requirements.txt file: https://github.com/whitmd/ie-summer'
+    'All cells must be filled in for the simulation to run properly. Press the Run Simulation button only when every cell is filled',
+    'Click on each cell or tab between them to input information.  Hover column names in the table to learn more information', 
+    'Add or remove products and attributes by pressing the associated buttons. Rename products by pressing the pencil icon in the cell\'s header; remove products by pressing the trash icon',
+    'Score STDev, Weight, and all product scores between 0 and 10. Edit the default values in the table to reflect your product',
+    'Consumer count and number of months to simulate will determine sales - edit the placeholder values to reflect market conditions. Enter the cost to produce your new product to determine profits',
+    'To analyze the graphs, hover over each to determine an exact number of sales or profits',
+    'If the page fails to load at any point, press the Run Simulation button again; if that fails, refresh the page and reenter the information. To download, visit https://github.com/whitmd/ie-summer',
     ]
 
 kanotooltip = [
-    'Basic: A necessary attribute that does not impact consumer’s happiness if it is included, but greatly dissatisfies consumers if it is absent.',
+    'Basic: A necessary attribute that does not impact consumer\'s happiness if it is included, but greatly dissatisfies consumers if it is absent.',
     'Satisfier: An attribute that is expected to be included in a product, and its effect on consumer satisfaction increases linearly with its inclusion.',
     'Delighter: A luxury attribute that is nice to have, it greatly increases consumer satisfaction if included. If absent, the consumer does not miss it.'
 ]
@@ -231,7 +226,7 @@ app.layout = html.Div([
     dbc.Row(dbc.Col(html.P("You will assume the role of the producer developing a new product, and will enter information about the product and its competitors. Consumers will then choose which products to purchase, revealing trends in market share and your new product's profits."),
                     style={"textAlign":"center", "marginLeft": "75px","marginRight":"75px"})),
     dbc.Row(dbc.Col(children=[html.Ul(id='list', children=[html.Li(i) for i in instructions])],
-                    style={"textAlign":"left", "marginLeft": "290px","marginRight":"75px"})),
+                    style={"textAlign":"left", "marginLeft": "75px","marginRight":"60px"})),
                     
     dbc.Row([
             dbc.Col(children=html.Div([
@@ -269,14 +264,14 @@ app.layout = html.Div([
                          'deletable': False,
                          'renamable': False},
 
-                        {'name': 'Stdev',
-                         'id': 'Stdev',
+                        {'name': 'Weight',
+                         'id': 'Weight',
                          'deletable': False,
                          'renamable': False,
                          'type': 'numeric'},
 
-                        {'name': 'Weight',
-                         'id': 'Weight',
+                         {'name': 'Spread',
+                         'id': 'Stdev',
                          'deletable': False,
                          'renamable': False,
                          'type': 'numeric'},
@@ -353,24 +348,6 @@ app.layout = html.Div([
                         'NewProduct': 'Besides price, use number in range of 0 - 10'
                     },
 
-                    # indicate tooltip with dotted line
-                    # style_header_conditional=[{
-                    #     'if': {'column_id': col},
-                    #     'textDecoration': 'underline',
-                    #     'textDecorationStyle': 'dotted',
-                    # } for col in ['Kanotype', 'Direction', 'Stdev', 'Weight', 'NewProduct']],
-
-                    # style_cell={
-                    #     'textAlign': 'right',
-                    #     'color':'darkslategrey',
-                    #     'overflow': 'hidden',
-                    #     'textOverflow': 'ellipsis',
-                    #     'maxWidth': 0,
-                    # },
-                    # tooltip_delay=0,
-                    # tooltip_duration=None,
-
-
                     style_header={
                     'backgroundColor': 'rgb(126, 182, 196)',
                     'color':'darkslategrey',
@@ -392,14 +369,14 @@ app.layout = html.Div([
                             [
                                 dbc.Label("Consumers", className="mr-2"),
                                 dbc.Input(
-                                    id='consumers-in-market', placeholder='Enter # of consumers', type='number'),
+                                    id='consumers-in-market', placeholder='1000', type='number'),
                             ],
                             className="mr-3",
                         ),
                         dbc.FormGroup(
                             [
                                 dbc.Label("Months", className="mr-2"),
-                                dbc.Input(id='months', placeholder='Enter months',
+                                dbc.Input(id='months', placeholder='36',
                                           type='number'),
                             ],
                             className="mr-3",
@@ -408,7 +385,7 @@ app.layout = html.Div([
                             [
                                 dbc.Label("Months/Tick", className="mr-2"),
                                 dbc.Input(
-                                    id='monthsPerTick', placeholder='Enter months per tick', type='number'),
+                                    id='monthsPerTick', placeholder='1', type='number'),
                             ],
                             className="mr-3",
                         ),
@@ -503,7 +480,7 @@ def generate_chart(n_clicks, table, columns, consumers, cost, months, monthsPerT
         line = px.line(profit, x="Time (Months)", y="Profit ($)", title='New Product Cumulative Profit', color_discrete_sequence=px.colors.qualitative.Prism) # line graph: profit
        
         noncumulativeprofit = sim.getNonCumulativeProfitData()
-        noncumbar = px.bar(noncumulativeprofit, x="Time (Months)", y="Profit ($)", title='New Product Non-Cumulative Profit', color_discrete_sequence=px.colors.qualitative.Prism) # line graph: profit non cumulative
+        noncumbar = px.line(noncumulativeprofit, x="Time (Months)", y="Profit ($)", title='New Product Non-Cumulative Profit', color_discrete_sequence=px.colors.qualitative.Prism) # line graph: profit non cumulative
         
         return pie, line, noncumbar
 

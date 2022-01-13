@@ -84,8 +84,6 @@ class Consumer:
 
 class Product:
     def __init__(self, valueList, name):
-        print("product info:")
-        print(valueList)
         self.name = name
         self.profit = 0 # total profit accumulated for new product (starting with no profit)
         self.monthlySales = 0
@@ -127,9 +125,6 @@ class Simulation:
         self.cost = cost
         self.monthsPerTick = monthsPerTick
         self.ticks = int(months/monthsPerTick) # prevents non integer months
-
-        print("raw table:")
-        print(table)
 
         self.profitPerSale = int(self.df.iat[1, 5]) - self.cost # profit calculation
 
@@ -465,9 +460,6 @@ def generate_chart(n_clicks, table, columns, consumers, cost, months, monthsPerT
     if n_clicks is None:
         raise PreventUpdate
     else:
-        print("table:")
-        print(table)
-        print("columns:")
         print([c['id'] for c in columns])
         df = pd.DataFrame.from_records(table, columns=[c['id'] for c in columns])
         print(df)

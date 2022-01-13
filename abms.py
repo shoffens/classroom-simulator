@@ -34,8 +34,6 @@ class Consumer:
         self.ownedProductRemainingLifespan = 0
         self.monthsPerTick = monthsPerTick
 
-
-
     def setPreferences(self, stdevs, weights):  # creates consumer preferences
         self.preferences = []
         for stdev, weight in zip(stdevs.values, weights.values):
@@ -65,7 +63,7 @@ class Consumer:
                     score = preference * math.e ** (2 * attribute - 1)
 
             return score
-
+       
 
         if self.ownedProductRemainingLifespan > 0:
             self.ownedProductRemainingLifespan -= self.monthsPerTick
@@ -81,11 +79,13 @@ class Consumer:
 
             chosenIdx = max(result, key=result.get) # consumer choice of product that has best score
             products[chosenIdx].buy() # consumers buy product
-            self.ownedProductRemainingLifespan = products[chosenIdx].lifespan
+            self.ownedProductRemainingLifespan = products[chosenIdx].lifespan  - np.random.exponential()
             self.bestProducer = chosenIdx
 
 class Product:
     def __init__(self, valueList, name):
+        print("product info:")
+        print(valueList)
         self.name = name
         self.profit = 0 # total profit accumulated for new product (starting with no profit)
         self.monthlySales = 0
@@ -103,9 +103,6 @@ class Product:
     
     def resetmonthlySales(self): # remove?
         self.monthlySales = 0
-
-    def decreaseLifespan(self):
-        self.remainingLifespan -= monthsPerTick
 
 
 
@@ -131,6 +128,9 @@ class Simulation:
         self.monthsPerTick = monthsPerTick
         self.ticks = int(months/monthsPerTick) # prevents non integer months
 
+        print("raw table:")
+        print(table)
+
         self.profitPerSale = int(self.df.iat[1, 5]) - self.cost # profit calculation
 
         self.attributeDF = self.df.iloc[:, 0:5] # splits data table into attributes dataframe
@@ -145,7 +145,7 @@ class Simulation:
         self.noncumulativeprofitDF = {'Time (Months)': [], 'Profit ($)': []} # dict with time and non cumulative profit for graphing
 
         self.consumers = [Consumer(
-                self.df['Stdev'], self.df['Weight'], self.df['Kanotype'], self.df['Direction'], self.monthsPerTick) for _ in range(consumers)] # for amount of customers specified
+                self.df['Spread'], self.df['Weight'], self.df['Kanotype'], self.df['Direction'], self.monthsPerTick) for _ in range(consumers)] # for amount of customers specified
 
         for i in range(self.ticks): # loop that runs every tick
             for consumer in self.consumers:
@@ -206,7 +206,7 @@ instructions = [
     'All cells must be filled in for the simulation to run properly. Press the Run Simulation button only when every cell is filled',
     'Click on each cell or tab between them to input information.  Hover column names in the table to learn more information', 
     'Add or remove products and attributes by pressing the associated buttons. Rename products by pressing the pencil icon in the cell\'s header; remove products by pressing the trash icon',
-    'Score STDev, Weight, and all product scores between 0 and 10. Edit the default values in the table to reflect your product',
+    'Spread, Weight, and all product scores between 0 and 10. Edit the default values in the table to reflect your product',
     'Consumer count and number of months to simulate will determine sales - edit the placeholder values to reflect market conditions. Enter the cost to produce your new product to determine profits',
     'To analyze the graphs, hover over each to determine an exact number of sales or profits',
     'If the page fails to load at any point, press the Run Simulation button again; if that fails, refresh the page and reenter the information. To download, visit https://github.com/whitmd/ie-summer',
@@ -264,14 +264,14 @@ app.layout = html.Div([
                          'deletable': False,
                          'renamable': False},
 
-                        {'name': 'Weight',
+                        {'name': 'Weight', # swapped places with spread column
                          'id': 'Weight',
                          'deletable': False,
                          'renamable': False,
                          'type': 'numeric'},
 
                          {'name': 'Spread',
-                         'id': 'Stdev',
+                         'id': 'Spread',
                          'deletable': False,
                          'renamable': False,
                          'type': 'numeric'},
@@ -311,7 +311,7 @@ app.layout = html.Div([
                             'Attribute': 'Lifespan (months)',
                             'Kanotype': 'satisfier',
                             'Direction': 'higher is better',
-                            'Stdev': '5',
+                            'Spread': '5',
                             'Weight': '5',
                             'NewProduct': '12',
                             'Competitor-1': '3'
@@ -320,7 +320,7 @@ app.layout = html.Div([
                             'Attribute': 'Price',
                             'Kanotype': 'satisfier',
                             'Direction': 'lower is better',
-                            'Stdev': '5',
+                            'Spread': '5',
                             'Weight': '5',
                             'NewProduct': '20',
                             'Competitor-1': '50'
@@ -329,7 +329,7 @@ app.layout = html.Div([
                             'Attribute': None,
                             'Kanotype': None,
                             'Direction': 'higher is better',
-                            'Stdev': None,
+                            'Spread': None,
                             'Weight': None,
                             'NewProduct': None,
                             'Competitor-1': None
@@ -343,7 +343,7 @@ app.layout = html.Div([
                         'Kanotype': 'Basic: necessary, Satisfier: expected, Delighter: nice to have',
                         # 'Kanotype': html.Ul(id='list', children=[html.Li(i) for i in kanotooltip]),
                         'Direction': 'For positive attributes, higher score is better vs. negative attributes, where lower score is better',
-                        'Stdev': 'Number in the range of 0 - 10',
+                        'Spread': 'Number in the range of 0 - 10',
                         'Weight': 'Number in the range of 1 - 10',
                         'NewProduct': 'Besides price, use number in range of 0 - 10'
                     },
@@ -369,14 +369,14 @@ app.layout = html.Div([
                             [
                                 dbc.Label("Consumers", className="mr-2"),
                                 dbc.Input(
-                                    id='consumers-in-market', placeholder='1000', type='number'),
+                                    id='consumers-in-market', type='number', value=1000, max=5000),
                             ],
                             className="mr-3",
                         ),
                         dbc.FormGroup(
                             [
                                 dbc.Label("Months", className="mr-2"),
-                                dbc.Input(id='months', placeholder='36',
+                                dbc.Input(id='months', value=36,
                                           type='number'),
                             ],
                             className="mr-3",
@@ -385,7 +385,7 @@ app.layout = html.Div([
                             [
                                 dbc.Label("Months/Tick", className="mr-2"),
                                 dbc.Input(
-                                    id='monthsPerTick', placeholder='1', type='number'),
+                                    id='monthsPerTick', value=1, type='number'),
                             ],
                             className="mr-3",
                         ),

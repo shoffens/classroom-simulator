@@ -14,6 +14,7 @@ from dash import dash_table
 from dash.exceptions import PreventUpdate
 start_time = time.time()  # tracks execution time
 
+# Steven change 10-07
 KANOTYPES = ['basic', 'satisfier', 'delighter'] # kano types
 
 DIRECTIONS = ["higher is better", "lower is better"] # indicates reversed kano types

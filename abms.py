@@ -46,9 +46,8 @@ class Consumer:
             attribute = float(attribute)
             score = 0
             
-            if direction == "lower is better":
-    
-                if kanotype == 'basic': # reversed kano types
+            if direction == "lower is better": # reversed kano types
+                if kanotype == 'basic': 
                     score = preference * (0 - math.e ** (2 * attribute - 1))
                 elif kanotype == 'satisfier':
                     score = -preference * attribute
@@ -79,7 +78,7 @@ class Consumer:
 
             chosenIdx = max(result, key=result.get) # consumer choice of product that has best score
             products[chosenIdx].buy() # consumers buy product
-            self.ownedProductRemainingLifespan = products[chosenIdx].lifespan  - np.random.exponential()
+            self.ownedProductRemainingLifespan = products[chosenIdx].lifespan  * np.random.exponential() #Changed to multiply by random.exp
             self.bestProducer = chosenIdx
 
 class Product:
@@ -150,7 +149,7 @@ class Simulation:
             # -------------------------
             self.noncumulativeprofitDF['Time (Months)'].append(i*self.monthsPerTick) # sets month for x axis on graph
             self.noncumulativeprofitDF['Profit ($)'].append(self.products[0].monthlySales * self.profitPerSale) # sets profit for y axis
-            self.products[0].resetmonthlySales()
+            self.products[0].resetmonthlySales()  #Consider setting equal to zero rather than calling function
             # --------------------------
 
     def setAttributes(self):

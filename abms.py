@@ -213,6 +213,10 @@ kanotooltip = [
 ]
 
 app.layout = html.Div([
+    html.Button("Download CSV", id="btn_csv"),
+    dcc.Download(id="download-dataframe-csv"),
+
+
     dbc.Row(dbc.Col(html.H1("ABM Market Simulator"),
                     style={"textAlign": "center"})),
     dbc.Row(dbc.Col(html.P("Welcome to the ABM Market Simulator, where you will simulate your product in the market."),
@@ -221,7 +225,7 @@ app.layout = html.Div([
                     style={"textAlign":"center", "marginLeft": "75px","marginRight":"75px"})),
     dbc.Row(dbc.Col(children=[html.Ul(id='list', children=[html.Li(i) for i in instructions])],
                     style={"textAlign":"left", "marginLeft": "75px","marginRight":"60px"})),
-                    
+
     dbc.Row([
             dbc.Col(children=html.Div([
 
@@ -409,6 +413,15 @@ app.layout = html.Div([
 
 
 # ------------------ end of layout --------------------
+
+@app.callback(
+    Output("download-dataframe-csv", "data"),
+    Input("btn_csv", "n_clicks"),
+    prevent_initial_call=True,
+)
+def func(n_clicks):
+    return dcc.send_data_frame(df.to_csv, "mydf.csv")
+
 
 @app.callback(  # adds attributes
     Output('adding-rows-table', 'data'),

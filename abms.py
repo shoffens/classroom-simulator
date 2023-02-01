@@ -213,8 +213,10 @@ kanotooltip = [
 ]
 
 app.layout = html.Div([
-    html.Button("Download CSV", id="btn_csv"),
-    dcc.Download(id="download-dataframe-csv"),
+    
+    #CSV download button
+    html.Button("Download CSV", id="btn_csv"), #Physical button
+    dcc.Download(id="download-dataframe-csv"),  #Allows direct download from Dash App
 
 
     dbc.Row(dbc.Col(html.H1("ABM Market Simulator"),
@@ -414,13 +416,22 @@ app.layout = html.Div([
 
 # ------------------ end of layout --------------------
 
+    #initialized global DF for CSV save --> Uses same initial values as datatable in layout
+dfSave = pd.DataFrame({'Attribute':['Lifespan (months)','Price',None],
+                       'Kanotype': ['satisfier','satisfier',None],
+                       'Direction': ['higher is better','lower is better','higher is better'],
+                       'Spread': ['5','5',None],
+                       'Weight': ['5','5',None],
+                       'New Product': ['12','20',None], #Supposed to be NewProduct
+                       'Competitor 1': ['3','50',None]}) #Supposed to be Competitor-1
+
 @app.callback(
     Output("download-dataframe-csv", "data"),
     Input("btn_csv", "n_clicks"),
     prevent_initial_call=True,
 )
 def func(n_clicks):
-    return dcc.send_data_frame(df.to_csv, "mydf.csv")
+    return dcc.send_data_frame(dfSave.to_csv, "mydf.csv")
 
 
 @app.callback(  # adds attributes
@@ -431,6 +442,7 @@ def func(n_clicks):
 def add_row(n_clicks, rows, columns):
     if n_clicks > 0:
         rows.append({c['id']: '' for c in columns}) # TODO: should this set the cells equal to None?
+        print("testing:",{c['id']: '' for c in columns})
     return rows
 
 
@@ -450,6 +462,7 @@ def update_columns(n_clicks, value, existing_columns):
             'id': value, 'name': value, 'editable': True,
             'renamable': True, 'deletable': True
         })
+    print("testing:",existing_columns[0]) #Can existing_columns be saved/uploaded directly?
     return existing_columns
 
 

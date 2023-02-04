@@ -393,7 +393,7 @@ app.layout = html.Div([
                             [
                                 dbc.Label("Cost", className="mr-2"),
                                 dbc.Input(
-                                    id='production-cost', placeholder='Enter production cost', type='number'),
+                                    id='production-cost', placeholder='Enter production cost', type='number',value=10),
                             ],
                             className="mr-5",
                         ),
@@ -428,10 +428,13 @@ dfSave = pd.DataFrame({'Attribute':['Lifespan (months)','Price',None],
 @app.callback(
     Output("download-dataframe-csv", "data"),
     Input("btn_csv", "n_clicks"),
+    State("adding-rows-table","data"),
+    State('adding-rows-table', 'columns'),
     prevent_initial_call=True,
 )
-def func(n_clicks):
-    return dcc.send_data_frame(dfSave.to_csv, "mydf.csv")
+def func(n_clicks,table,columns):
+    df = pd.DataFrame.from_records(table, columns=[c['id'] for c in columns])
+    return dcc.send_data_frame(df.to_csv, "mytable.csv")
 
 
 @app.callback(  # adds attributes

@@ -201,9 +201,8 @@ instructions = ['Be sure to fill in every cell, or the program won\'t run.',
                 'Rename products by clicking the pencil icon in the header; click the trash icon to remove.',
                 'Keep all Weight and Spread values between 0 and 10.',
                 'Set Spread to a low initial value. Increase it the more consumers would disagree on the importance (weight) of a given attribute.',
-                'Consumer count, production cost, price, and number of months generate the sales graphs.',
                 'Hover over graphs to see detail. You should see peaks in the graphs every [Lifespan] years.',
-                'If the page fails to load at any point, press the Run Simulation button again; if that fails, refresh the page and reenter the information. To download, visit https://github.com/whitmd/ie-summer']
+                '!! Your data will not save when you reload the page !!']
 
 kanotooltip = [
     'Basic: A necessary attribute that does not impact consumer\'s happiness if it is included, but greatly dissatisfies consumers if it is absent.',

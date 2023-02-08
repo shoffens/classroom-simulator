@@ -213,10 +213,18 @@ kanotooltip = [
 ]
 
 app.layout = html.Div([
-    
     #CSV download button
-    html.Button("Download CSV", id="btn_csv"), #Physical button
+    html.Button("Download CSV", id="btn_csv", 
+                style={'font-size': '15px', 'width': '120px', 
+                       'margin-bottom': '10px', 'margin-right': '5px', 'height':'35px'}), #Physical button
     dcc.Download(id="download-dataframe-csv"),  #Allows direct download from Dash App
+
+    #CSV upload button
+    html.Button("Upload CSV", id = "btn2_csv", 
+                style={'font-size': '15px', 'width': '120px', 
+                       'margin-bottom': '10px', 'margin-right': '5px', 'height':'35px'}), #Physical button
+    dcc.Upload(id="upload-dataframe-csv", multiple = False), #Upload file, multiple files not allowed
+  
 
 
     dbc.Row(dbc.Col(html.H1("ABM Market Simulator"),
@@ -415,26 +423,27 @@ app.layout = html.Div([
 
 
 # ------------------ end of layout --------------------
-
-    #initialized global DF for CSV save --> Uses same initial values as datatable in layout
-dfSave = pd.DataFrame({'Attribute':['Lifespan (months)','Price',None],
-                       'Kanotype': ['satisfier','satisfier',None],
-                       'Direction': ['higher is better','lower is better','higher is better'],
-                       'Spread': ['5','5',None],
-                       'Weight': ['5','5',None],
-                       'New Product': ['12','20',None], #Supposed to be NewProduct
-                       'Competitor 1': ['3','50',None]}) #Supposed to be Competitor-1
-
+'''
 @app.callback(
+    Output(),
+    Input("btn_csv2", "n_clicks"),
+    State()
+)
+def upload_csv(n_clicks):
+'''
+
+
+@app.callback( #download csv
     Output("download-dataframe-csv", "data"),
     Input("btn_csv", "n_clicks"),
     State("adding-rows-table","data"),
     State('adding-rows-table', 'columns'),
     prevent_initial_call=True,
 )
-def func(n_clicks,table,columns):
-    df = pd.DataFrame.from_records(table, columns=[c['id'] for c in columns])
-    return dcc.send_data_frame(df.to_csv, "mytable.csv")
+def download_csv(n_clicks,table,columns):
+    df = pd.DataFrame.from_records(table, columns=[c['id'] for c in columns], index = False)
+    print("df print:",df)
+    return dcc.send_data_frame(df.to_csv, "mytable.csv") #Need to remove Index from CSV --> to_csv() causes an error
 
 
 @app.callback(  # adds attributes
@@ -465,7 +474,7 @@ def update_columns(n_clicks, value, existing_columns):
             'id': value, 'name': value, 'editable': True,
             'renamable': True, 'deletable': True
         })
-    print("testing:",existing_columns[0]) #Can existing_columns be saved/uploaded directly?
+    print("testing:",existing_columns) #Can existing_columns be saved/uploaded directly?
     return existing_columns
 
 

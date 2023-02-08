@@ -196,15 +196,14 @@ controls = dbc.Card(
 
 # -----------    page layout   ------------------------
 
-instructions = [
-    'All cells must be filled in for the simulation to run properly. Press the Run Simulation button only when every cell is filled',
-    'Click on each cell or tab between them to input information.  Hover column names in the table to learn more information', 
-    'Add or remove products and attributes by pressing the associated buttons. Rename products by pressing the pencil icon in the cell\'s header; remove products by pressing the trash icon',
-    'Spread, Weight, and all product scores between 0 and 10. Edit the default values in the table to reflect your product',
-    'Consumer count and number of months to simulate will determine sales - edit the placeholder values to reflect market conditions. Enter the cost to produce your new product to determine profits',
-    'To analyze the graphs, hover over each to determine an exact number of sales or profits',
-    'If the page fails to load at any point, press the Run Simulation button again; if that fails, refresh the page and reenter the information. To download, visit https://github.com/whitmd/ie-summer',
-    ]
+instructions = ['Be sure to fill in every cell, or the program won\'t run.',
+                'Hover over column names to see additional information.',
+                'Rename products by clicking the pencil icon in the header; click the trash icon to remove.',
+                'Keep all Weight and Spread values between 0 and 10.',
+                'Set Spread to a low initial value. Increase it the more consumers would disagree on the importance (weight) of a given attribute.',
+                'Consumer count, production cost, price, and number of months generate the sales graphs.',
+                'Hover over graphs to see detail. You should see peaks in the graphs every [Lifespan] years.',
+                'If the page fails to load at any point, press the Run Simulation button again; if that fails, refresh the page and reenter the information. To download, visit https://github.com/whitmd/ie-summer']
 
 kanotooltip = [
     'Basic: A necessary attribute that does not impact consumer\'s happiness if it is included, but greatly dissatisfies consumers if it is absent.',
@@ -213,20 +212,6 @@ kanotooltip = [
 ]
 
 app.layout = html.Div([
-    #CSV download button
-    html.Button("Download CSV", id="btn_csv", 
-                style={'font-size': '15px', 'width': '120px', 
-                       'margin-bottom': '10px', 'margin-right': '5px', 'height':'35px'}), #Physical button
-    dcc.Download(id="download-dataframe-csv"),  #Allows direct download from Dash App
-
-    #CSV upload button
-    html.Button("Upload CSV", id = "btn2_csv", 
-                style={'font-size': '15px', 'width': '120px', 
-                       'margin-bottom': '10px', 'margin-right': '5px', 'height':'35px'}), #Physical button
-    dcc.Upload(id="upload-dataframe-csv", multiple = False), #Upload file, multiple files not allowed
-  
-
-
     dbc.Row(dbc.Col(html.H1("ABM Market Simulator"),
                     style={"textAlign": "center"})),
     dbc.Row(dbc.Col(html.P("Welcome to the ABM Market Simulator, where you will simulate your product in the market."),
@@ -423,27 +408,6 @@ app.layout = html.Div([
 
 
 # ------------------ end of layout --------------------
-'''
-@app.callback(
-    Output(),
-    Input("btn_csv2", "n_clicks"),
-    State()
-)
-def upload_csv(n_clicks):
-'''
-
-
-@app.callback( #download csv
-    Output("download-dataframe-csv", "data"),
-    Input("btn_csv", "n_clicks"),
-    State("adding-rows-table","data"),
-    State('adding-rows-table', 'columns'),
-    prevent_initial_call=True,
-)
-def download_csv(n_clicks,table,columns):
-    df = pd.DataFrame.from_records(table, columns=[c['id'] for c in columns], index = False)
-    print("df print:",df)
-    return dcc.send_data_frame(df.to_csv, "mytable.csv") #Need to remove Index from CSV --> to_csv() causes an error
 
 
 @app.callback(  # adds attributes
@@ -454,7 +418,6 @@ def download_csv(n_clicks,table,columns):
 def add_row(n_clicks, rows, columns):
     if n_clicks > 0:
         rows.append({c['id']: '' for c in columns}) # TODO: should this set the cells equal to None?
-        print("testing:",{c['id']: '' for c in columns})
     return rows
 
 
@@ -474,7 +437,6 @@ def update_columns(n_clicks, value, existing_columns):
             'id': value, 'name': value, 'editable': True,
             'renamable': True, 'deletable': True
         })
-    print("testing:",existing_columns) #Can existing_columns be saved/uploaded directly?
     return existing_columns
 
 
@@ -497,9 +459,7 @@ def generate_chart(n_clicks, table, columns, consumers, cost, months, monthsPerT
     if n_clicks is None:
         raise PreventUpdate
     else:
-        print([c['id'] for c in columns])
         df = pd.DataFrame.from_records(table, columns=[c['id'] for c in columns])
-        print(df)
         sim = Simulation(df, consumers, int(months), cost, monthsPerTick)
 
         ms = sim.getMarketShares()
@@ -523,3 +483,8 @@ suppress_callback_exceptions=False
 
 if __name__ == '__main__':
     app.run_server(debug=True, dev_tools_hot_reload=False)
+
+
+
+
+#requirements.txt dash = 2.8.0

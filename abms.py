@@ -482,8 +482,3 @@ suppress_callback_exceptions=False
 
 if __name__ == '__main__':
     app.run_server(debug=True, dev_tools_hot_reload=False)
-
-
-
-
-#requirements.txt dash = 2.8.0

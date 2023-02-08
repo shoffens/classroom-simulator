@@ -19,8 +19,8 @@ KANOTYPES = ['basic', 'satisfier', 'delighter'] # kano types
 DIRECTIONS = ["higher is better", "lower is better"] # indicates reversed kano types
 
 # bootstrap style sheet
-app = dash.Dash(external_stylesheets=[dbc.themes.SOLAR])
-server = app.server
+application = dash.Dash(external_stylesheets=[dbc.themes.SOLAR])
+server = application.server
 
 # ---------------
 
@@ -210,7 +210,7 @@ kanotooltip = [
     'Delighter: A luxury attribute that is nice to have, it greatly increases consumer satisfaction if included. If absent, the consumer does not miss it.'
 ]
 
-app.layout = html.Div([
+application.layout = html.Div([
     dbc.Row(dbc.Col(html.H1("ABM Market Simulator"),
                     style={"textAlign": "center"})),
     dbc.Row(dbc.Col(html.P("Welcome to the ABM Market Simulator, where you will simulate your product in the market."),
@@ -409,7 +409,7 @@ app.layout = html.Div([
 # ------------------ end of layout --------------------
 
 
-@app.callback(  # adds attributes
+@application.callback(  # adds attributes
     Output('adding-rows-table', 'data'),
     Input('add-row-button', 'n_clicks'),
     State('adding-rows-table', 'data'),
@@ -423,7 +423,7 @@ def add_row(n_clicks, rows, columns):
 prevent_initial_call = True
 
 
-@app.callback(  # adds products
+@application.callback(  # adds products
     Output('adding-rows-table', 'columns'),
     Input('add-column-button', 'n_clicks'),
     State('adding-rows-name', 'value'),
@@ -442,7 +442,7 @@ def update_columns(n_clicks, value, existing_columns):
 prevent_initial_call = True
 
 
-@app.callback(
+@application.callback(
     Output('pie-chart', 'figure'),
     Output('line-graph', 'figure'),
     Output('bar-graph-noncum', 'figure'),
@@ -481,4 +481,4 @@ suppress_callback_exceptions=False
 # -------------------------------------------------------
 
 if __name__ == '__main__':
-    app.run_server(debug=True, dev_tools_hot_reload=False)
+    application.run_server(debug=True, dev_tools_hot_reload=False)
